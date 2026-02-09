@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using VisionCore.ViewModels;
 
 namespace VisionCore.Views
 {
@@ -23,6 +24,7 @@ namespace VisionCore.Views
         public MainWindow()
         {
             InitializeComponent();
+            this.DataContext = new MainViewModel();
         }
     }
 }

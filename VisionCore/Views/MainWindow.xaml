@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
         xmlns:cognex_controls="clr-namespace:Cognex.InSight.Web.Controls;assembly=Cognex.InSight.Web.Controls"
+        xmlns:behaviors="clr-namespace:VisionCore.Views"
         Title="VisionCore" Height="1024" Width="1280"
         Background="#202020" WindowStyle="None" WindowState="Maximized"
         >
@@ -25,6 +26,8 @@
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Window.Resources>
 
     <Grid x:Name="tLayout_Main">
@@ -44,10 +47,10 @@
                            FontSize="36" FontFamily="Impact" VerticalAlignment="Center" Margin="0,5,10,0"
                            TextAlignment="Right" Width="280"/>
 
-                <ToggleButton Style="{StaticResource IconToggleButtonStyle}" Width="55" Height="55"
-                              IsChecked="{Binding IsOnline}" Margin="0,7,5,0">
+                <Button Style="{StaticResource IconButtonStyle}" Width="55" Height="55"
+                              Command="{Binding ConnectCommand}" Margin="0,7,5,0">
                     <Image Source="/Resources/Run_48.png" Width="40"/>
-                </ToggleButton>
+                </Button>
 
                 <Button Style="{StaticResource IconButtonStyle}" Width="55" Height="55"
                         Command="{Binding CloseCommand}" Margin="0,7,7,0">
@@ -56,20 +59,15 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" Background="#202020">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="800" MinWidth="200"/>
-                <ColumnDefinition Width="2"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <wfi:WindowsFormsHost Grid.Column="0" Margin="1">
+        <Grid Grid.Row="1">
+            <wfi:WindowsFormsHost behaviors:InSightBehavior.SensorSource="{Binding IsInSightSensor}">
                 <cognex_controls:CvsDisplay x:Name="cvsDisplay"/>
             </wfi:WindowsFormsHost>
 
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Gray"/>
-
-            <wfi:WindowsFormsHost Grid.Column="2">
+            <wfi:WindowsFormsHost Margin="20,50,20,20"
+                              Opacity="0.8"
+                              Visibility="{Binding DisplayVM.IsGridVisible, Converter={StaticResource BoolToVis}}"
+                              behaviors:InSightBehavior.SensorSource="{Binding IsInSightSensor}">
                 <cognex_controls:CvsSpreadsheet x:Name="cvsSpreadsheet"/>
             </wfi:WindowsFormsHost>
         </Grid>
@@ -91,14 +89,20 @@
                 </ToggleButton>
                 <Rectangle Width="20"/>
                 <Button Style="{StaticResource IconButtonStyle}" Command="{Binding SaveImageCommand}">
-                    <Image Source="/Resources/SaveImage_32.png"/>
-                </Button>
-                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding CaptureCommand}">
                     <Image Source="/Resources/Image.32.png"/>
+                </Button>
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding OpenImageCommand}">
+                    <Image Source="/Resources/SaveImage_32.png"/>
                 </Button>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,0">
+                <ToggleButton Style="{StaticResource IconToggleButtonStyle}"
+                      Width="45" Height="45"
+                      IsChecked="{Binding DisplayVM.IsGridVisible}"
+                      ToolTip="Grid On/Off">
+                    <Image Source="/Resources/Sheet_32.png" Width="32"/>
+                </ToggleButton>
                 <Button Style="{StaticResource IconButtonStyle}" Command="{Binding MasterCommand}">
                     <Image Source="/Resources/Window.32.png"/>
                 </Button>
