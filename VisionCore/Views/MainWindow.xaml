@@ -1,0 +1,111 @@
+﻿<Window x:Class="VisionCore.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+        xmlns:cognex_controls="clr-namespace:Cognex.InSight.Web.Controls;assembly=Cognex.InSight.Web.Controls"
+        Title="VisionCore" Height="1024" Width="1280"
+        Background="#202020" WindowStyle="None" WindowState="Maximized"
+        >
+
+    <Window.Resources>
+        <Style x:Key="IconButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Width" Value="45"/>
+            <Setter Property="Height" Value="45"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="IconToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="tLayout_Main">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="70"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="50"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Background="#202020">
+            <TextBlock Text="FAPLUS In-Sight WebAPI Application"
+                       Foreground="White" FontSize="36" FontFamily="Impact"
+                       VerticalAlignment="Center" Margin="10,5,0,0" HorizontalAlignment="Left"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+                <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColor}"
+                           FontSize="36" FontFamily="Impact" VerticalAlignment="Center" Margin="0,5,10,0"
+                           TextAlignment="Right" Width="280"/>
+
+                <ToggleButton Style="{StaticResource IconToggleButtonStyle}" Width="55" Height="55"
+                              IsChecked="{Binding IsOnline}" Margin="0,7,5,0">
+                    <Image Source="/Resources/Run_48.png" Width="40"/>
+                </ToggleButton>
+
+                <Button Style="{StaticResource IconButtonStyle}" Width="55" Height="55"
+                        Command="{Binding CloseCommand}" Margin="0,7,7,0">
+                    <Image Source="/Resources/Close_48.png" Width="40"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" Background="#202020">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="800" MinWidth="200"/>
+                <ColumnDefinition Width="2"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <wfi:WindowsFormsHost Grid.Column="0" Margin="1">
+                <cognex_controls:CvsDisplay x:Name="cvsDisplay"/>
+            </wfi:WindowsFormsHost>
+
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Gray"/>
+
+            <wfi:WindowsFormsHost Grid.Column="2">
+                <cognex_controls:CvsSpreadsheet x:Name="cvsSpreadsheet"/>
+            </wfi:WindowsFormsHost>
+        </Grid>
+
+        <Grid Grid.Row="2" Background="#202020">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="5,0">
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding OpenCommand}">
+                    <Image Source="/Resources/JobOpen_32.png"/>
+                </Button>
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding SaveCommand}">
+                    <Image Source="/Resources/JobSave_32.png"/>
+                </Button>
+                <Rectangle Width="20"/>
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding TriggerCommand}">
+                    <Image Source="/Resources/Trigger_32.png"/>
+                </Button>
+                <ToggleButton Style="{StaticResource IconToggleButtonStyle}" Width="45" Height="45" IsChecked="{Binding IsLive}">
+                    <Image Source="/Resources/Live_32.png" Width="32"/>
+                </ToggleButton>
+                <Rectangle Width="20"/>
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding SaveImageCommand}">
+                    <Image Source="/Resources/SaveImage_32.png"/>
+                </Button>
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding CaptureCommand}">
+                    <Image Source="/Resources/Image.32.png"/>
+                </Button>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,0">
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding MasterCommand}">
+                    <Image Source="/Resources/Window.32.png"/>
+                </Button>
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding InfoCommand}">
+                    <Image Source="/Resources/info_32.png"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
