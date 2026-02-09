@@ -1,0 +1,21 @@
+## [ Visual Studio 관련 ]
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.cache
+
+## [ NuGet 패키지 ]
+packages/
+*.nuget.props
+*.nuget.targets
+
+## [ 라이브러리 (필요에 따라 조정) ]
+# SDK DLL은 보통 로컬 설치 경로를 참조하므로 깃에 올리지 않습니다.
+# 만약 프로젝트 내 Lib 폴더에 넣었다면 아래 주석을 해제하세요.
+# Lib/Cognex.*.dll
+
+## [ 로그 및 임시 파일 ]
+*.log
+TestResults/
