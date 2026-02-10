@@ -8,11 +8,10 @@ using System.Threading.Tasks;
 
 namespace VisionCore.Models
 {
-    public class CameraControl
+    public class CameraControlModel
     {
-        // 핵심 API 객체
 
-        public CameraControl()
+        public CameraControlModel()
         {
         }
 
@@ -28,7 +27,6 @@ namespace VisionCore.Models
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("=== 에러 상세 정보 ===");
                 System.Diagnostics.Debug.WriteLine($"Message: {ex.Message}");
                 if (ex.InnerException != null)
                 {

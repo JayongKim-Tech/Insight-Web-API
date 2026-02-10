@@ -48,20 +48,24 @@ namespace VisionCore.Views
                         }
                     }
                 }
+
                 else if (host.Child is CvsSpreadsheet spreadsheet)
                 {
                     spreadsheet.SetInSight(sensor);
+
                     if (sensor != null)
                     {
-                        sensor.ResultsChanged += async (s, ev) =>
+                        sensor.ConnectedChanged += (s, ev) =>
                         {
-                            spreadsheet.InitSpreadsheet();
+                            if (sensor.Connected)
+                            {
+                                spreadsheet.BeginInvoke((Action)(() => spreadsheet.InitSpreadsheet()));
+                            }
                         };
-
 
                         if (sensor.Connected)
                         {
-                            spreadsheet.InitSpreadsheet();
+                            spreadsheet.BeginInvoke((Action)(() => spreadsheet.InitSpreadsheet()));
                         }
                     }
                 }
