@@ -19,7 +19,11 @@ namespace VisionCore.Models
         {
             try
             {
-                var sessionInfo = new HmiSessionInfo { SheetName = "Inspection" };
+                var sessionInfo = new HmiSessionInfo
+                {
+                    SheetName = "Inspection",
+                    CellNames = new string[1] { "A0:Z599" }, // Designating a cell range requires 6.3 or newer firmware
+                };
 
                 await InSightSensor.Connect(ip, user, password, sessionInfo);
 

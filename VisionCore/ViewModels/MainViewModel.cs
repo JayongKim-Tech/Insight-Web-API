@@ -1,5 +1,6 @@
 ﻿using Cognex.InSight.Web;
 using System;
+using System.Collections.Specialized;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using VisionCore.Models;
@@ -31,7 +32,7 @@ public class MainViewModel : ViewModelBase
     {
         try
         {
-            await model.ConnectAsync(IsInSightSensor, "127.0.0.1:61863", "admin", "");
+            await model.ConnectAsync(IsInSightSensor, "127.0.0.1:58640", "admin", "");
 
             if (IsInSightSensor.Connected)
             {
@@ -82,16 +83,13 @@ public class MainViewModel : ViewModelBase
         try
         {
             var result = await IsInSightSensor.SetSoftOnlineAsync(targetValue);
-
-            if (result == null)
-            {
-                throw new Exception("API Response Error");
-            }
-
         }
         catch (Exception ex)
         {
-            _isOnline = !targetValue;
+            if (targetValue)
+            {
+                _isOnline = !targetValue;
+            }
             OnPropertyChanged(nameof(IsOnline));
         }
     }
