@@ -53,7 +53,8 @@
                 <RowDefinition Height="55"/>
                 <RowDefinition Height="50"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="30"/>
+                <RowDefinition Height="5"/>
+                <RowDefinition Height="150" MinHeight="30"/>
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0" Background="#1E1E1E" BorderBrush="#121212" BorderThickness="0,0,0,1">
@@ -90,7 +91,7 @@
                         <Button Command="{Binding NewJobCommand}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="New Job">
                             <Image Source="/Resources/NewJob_32.png" Width="18"/>
                         </Button>
-                        <Button Command="{Binding OpenCommand}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Open Job">
+                        <Button Command="{Binding OpenJobCommand}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Open Job">
                             <Image Source="/Resources/JobOpen_32.png" Width="18"/>
                         </Button>
                         <Button Command="{Binding SaveCommand}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Save Job">
@@ -118,30 +119,60 @@
                         <ToggleButton IsChecked="{Binding DisplayVM.IsGridVisible}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Show/Hide Grid">
                             <Image Source="/Resources/Sheet_32.png" Width="18"/>
                         </ToggleButton>
+
+                        <Button Command="{Binding OpenConfigCommand}"
+                            Style="{StaticResource SmallIconBtnStyle}"
+                            ToolTip="System Configuration">
+                            <Image Source="/Resources/Setting_64.png" Width="18" Opacity="0.8"/>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>
 
             <Grid Grid.Row="2" Background="Black">
-                <wfi:WindowsFormsHost behaviors:InSightBehavior.SensorSource="{Binding IsInSightSensor}">
+                <wfi:WindowsFormsHost behaviors:InSightBehavior.SensorSource="{Binding controlModel.IsInSightSensor}">
                     <cognex_controls:CvsDisplay x:Name="cvsDisplay"/>
                 </wfi:WindowsFormsHost>
 
                 <wfi:WindowsFormsHost Margin="30" Opacity="0.95"
                               Visibility="{Binding DisplayVM.IsGridVisible, Converter={StaticResource BoolToVis}}"
-                              behaviors:InSightBehavior.SensorSource="{Binding IsInSightSensor}">
+                              behaviors:InSightBehavior.SensorSource="{Binding controlModel.IsInSightSensor}">
                     <cognex_controls:CvsSpreadsheet x:Name="cvsSpreadsheet"/>
                 </wfi:WindowsFormsHost>
             </Grid>
 
-            <StatusBar Grid.Row="3" Background="#1E1E1E" Foreground="#555555" FontSize="11" Padding="10,0">
-                <StatusBarItem>
-                    <TextBlock Text="SYSTEM READY"/>
-                </StatusBarItem>
-                <StatusBarItem HorizontalAlignment="Right">
-                    <TextBlock Text="v1.0.0" Opacity="0.5"/>
-                </StatusBarItem>
-            </StatusBar>
+            <GridSplitter Grid.Row="3" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                  Background="#333333" ShowsPreview="True" ResizeBehavior="PreviousAndNext"/>
+
+            <Border Grid.Row="4" Background="#1E1E1E" BorderBrush="#121212" BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="25"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#252525" VerticalAlignment="Center">
+                        <TextBlock Text="LOG MESSAGES" Foreground="#888888" FontSize="11" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold"/>
+                    </StackPanel>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding loggerService.LogMessages}" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     Background="#121212" BorderThickness="0" Foreground="#DCDCDC"
+                     FontSize="12" FontFamily="Consolas">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Timestamp}" Foreground="#555555" FontSize="11"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{Binding LogColor}" TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
         </Grid>
     </DockPanel>
 </Window>

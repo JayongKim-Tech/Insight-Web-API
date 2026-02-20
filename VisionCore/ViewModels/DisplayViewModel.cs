@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VisionCore.Models;
 
 namespace VisionCore.ViewModels
 {
@@ -14,7 +15,22 @@ namespace VisionCore.ViewModels
         public bool IsGridVisible
         {
             get { return _isGridVisible; }
-            set { _isGridVisible = value; OnPropertyChanged(); }
+            set
+            {
+                if (_isGridVisible == value) return;
+
+                _isGridVisible = value;
+                OnPropertyChanged();
+
+                if (_isGridVisible)
+                {
+                    Logger.Info("스프레드시트 편집 창을 표시합니다.");
+                }
+                else
+                {
+                    Logger.Info("스프레드시트 편집 창을 숨깁니다.");
+                }
+            }
         }
 
     }
