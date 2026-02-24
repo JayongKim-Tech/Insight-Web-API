@@ -52,20 +52,13 @@ namespace VisionCore.ViewModels
         private async void RefreshFileList()
         {
             Files.Clear();
-
-            // 1. 모델에게 데이터 요청
+            CurrentDisplayPath =  AppDomain.CurrentDomain.BaseDirectory;
             var sensor = CameraControl.IsInSightSensor;
-            var newList = await fileManager.GetFileListAsync(SelectedLocationIndex, sensor);
+            var newList = await fileManager.GetFileListAsync(SelectedLocationIndex, sensor, CurrentDisplayPath);
 
-            // 2. 리스트 업데이트
+
             foreach (var item in newList) Files.Add(item);
 
-            // 3. 경로 텍스트 업데이트 (여기서 직접 수정해야 UI에 반영됨)
-            CurrentDisplayPath = (SelectedLocationIndex == 0)
-                ? "내 PC > 작업 폴더"
-                : "비전 센서 > Flash 메모리";
-
-            // UI에 경로가 바뀌었다고 알려줌
             OnPropertyChanged(nameof(CurrentDisplayPath));
         }
 

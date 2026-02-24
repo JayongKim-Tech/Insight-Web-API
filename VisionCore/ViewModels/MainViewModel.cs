@@ -22,7 +22,7 @@ public class MainViewModel : ViewModelBase
 
     public DisplayViewModel DisplayVM { get; set; } = new DisplayViewModel();
 
-    public LoggerService loggerService => LoggerService.Instance;
+    public LoggerService logger => LoggerService.Instance;
 
 
     public ICommand ConnectCommand { get; }
@@ -38,7 +38,7 @@ public class MainViewModel : ViewModelBase
         CloseCommand = new RelayCommand(async o => await ExecuteClose());
 
         OpenConfigCommand = new RelayCommand(o => ExecuteOpenConfig());
-        OpenJobCommand = new RelayCommand(async o => await ExcuteLoadJob());
+        OpenJobCommand = new RelayCommand(o => ExcuteLoadJob());
 
     }
 
@@ -156,7 +156,7 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private async Task ExcuteLoadJob()
+    private void ExcuteLoadJob()
     {
         try
         {

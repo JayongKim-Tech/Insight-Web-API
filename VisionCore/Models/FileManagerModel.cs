@@ -1,4 +1,5 @@
 ﻿using Cognex.InSight.Web;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -65,14 +66,33 @@ namespace VisionCore.Models
             List<FileItem> jobList = new List<FileItem>();
             try
             {
-                // ※ 주의: 실제 Cognex SDK 버전에 따라 파일 목록을 가져오는 API가 다를 수 있습니다.
-                // 보통은 FTP나 특정 Web API 경로(/system/files 등)를 쿼리해야 합니다.
-                // 일단 구조를 위해 샘플 데이터를 넣거나, 센서의 GetJobName 같은 정보를 활용합니다.
+                await Task.Delay(100);
 
-                // (예시 코드 - 실제 센서 통신 로직이 들어갈 자리)
-                // var files = await sensor.GetFileListAsync(); ...
+                string jsonResponse = await sensor.GetJobName();
+                if (!string.IsNullOrEmpty(jsonResponse))
+                {
+                    var data = JObject.Parse(jsonResponse);
+                    var items = data["items"];
 
-                jobList.Add(new FileItem { Name = "Sensor_Job_1.job", IsSensorFile = true, Date = "2024-05-22" });
+                    foreach (var item in items)
+                    {
+                        string fileName = item["name"]?.ToString();
+
+                        if (fileName != null && fileName.EndsWith(".job"))
+                        {
+                            jobList.Add(new FileItem
+                            {
+                                Name = fileName,
+                                Date = item["modified"]?.ToString() ?? "-",
+                                Size = (Convert.ToInt64(item["size"]) / 1024).ToString() + " KB",
+                                IsSensorFile = true,
+                                FullPath = fileName
+                            });
+                        }
+                    }
+
+
+                }
             }
             catch (Exception ex)
             {
@@ -81,14 +101,13 @@ namespace VisionCore.Models
             return jobList;
         }
 
-        public async Task<List<FileItem>> GetFileListAsync(int locationIndex, CvsInSight sensor)
+        public async Task<List<FileItem>> GetFileListAsync(int locationIndex, CvsInSight sensor, string startPath)
         {
             List<FileItem> jobList = new List<FileItem>();
 
             if (locationIndex == 0) // PC
             {
-                string startPath = AppDomain.CurrentDomain.BaseDirectory;
-                // PC 파일 읽기 로직 (기존 GetPcFileList 호출)
+
                 return GetPcFileList(startPath);
             }
             else // Sensor
