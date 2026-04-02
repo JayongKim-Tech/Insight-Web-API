@@ -23,7 +23,6 @@ namespace VisionCore.Views
             if (d is WindowsFormsHost host)
             {
                 var sensor = e.NewValue as CvsInSight;
-
                 if (host.Child is CvsDisplay display)
                 {
 

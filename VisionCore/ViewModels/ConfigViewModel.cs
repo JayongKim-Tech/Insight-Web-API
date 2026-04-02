@@ -11,7 +11,7 @@ namespace VisionCore.ViewModels
 {
     public class ConfigViewModel : ViewModelBase
     {
-        public Models.ConfigModel Settings => Models.ConfigModel.Instance;
+        public ConfigModel Settings => ConfigModel.Instance;
 
         public ICommand SaveCommand { get; }
 

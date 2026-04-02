@@ -1,0 +1,106 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="FilmstripCell.png" />
+    <None Remove="StatusChk40.png" />
+    <None Remove="StatusGeo40.png" />
+    <None Remove="StatusOk40.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="FilmstripCell.png" />
+    <EmbeddedResource Include="StatusChk40.png" />
+    <EmbeddedResource Include="StatusGeo40.png" />
+    <EmbeddedResource Include="StatusOk40.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cognex.InSight.Web\Cognex.InSight.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Windows" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="websocket-sharp-standard, Version=1.0.3.0, Culture=neutral, PublicKeyToken=5660b08a1845a91e, processorArchitecture=MSIL">
+      <HintPath>..\packages\WebSocketSharp.Standard.1.0.3\lib\netstandard2.0\websocket-sharp-standard.dll</HintPath>
+    </Reference>
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="CvsCustomView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="CvsCustomView.Designer.cs">
+      <DependentUpon>CvsCustomView.cs</DependentUpon>
+    </Compile>
+    <Compile Update="CvsCustomViewSettingsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="CvsCustomViewSettingsDialog.Designer.cs">
+      <DependentUpon>CvsCustomViewSettingsDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Update="CvsDisplay.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="CvsDisplay.Designer.cs">
+      <DependentUpon>CvsDisplay.cs</DependentUpon>
+    </Compile>
+    <Compile Update="CvsFilmstrip.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="CvsFilmstrip.Designer.cs">
+      <DependentUpon>CvsFilmstrip.cs</DependentUpon>
+    </Compile>
+    <Compile Update="CvsSpreadsheet.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="CvsSpreadsheet.Designer.cs">
+      <DependentUpon>CvsSpreadsheet.cs</DependentUpon>
+    </Compile>
+    <Compile Update="InSightDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="InSightDialog.Designer.cs">
+      <DependentUpon>InSightDialog.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="CvsCustomViewSettingsDialog.resx">
+      <DependentUpon>CvsCustomViewSettingsDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="CvsDisplay.resx">
+      <DependentUpon>CvsDisplay.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="CvsFilmstrip.resx">
+      <DependentUpon>CvsFilmstrip.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="CvsSpreadsheet.resx">
+      <DependentUpon>CvsSpreadsheet.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="InSightDialog.resx">
+      <DependentUpon>InSightDialog.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

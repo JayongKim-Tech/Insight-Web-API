@@ -116,6 +116,29 @@
                             <Image Style="{StaticResource OnlineStatusImageStyle}"/>
                         </ToggleButton>
                         <Rectangle Width="1" Fill="#444444" Margin="15,12"/>
+
+                        <ToggleButton IsChecked="{Binding DisplayVM.IsGraphicVisible}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Show/Hide Graphics">
+                            <Viewbox Width="18" Height="18">
+                                <Canvas Width="32" Height="32">
+                                    <Path Data="M4,26 L12,14 L18,20 L24,11 L28,26 Z"
+                                      Fill="#444444"
+                                      Stroke="White"
+                                      StrokeThickness="1.5"
+                                      StrokeLineJoin="Round"/>
+
+                                    <Path Data="M20,10 L26,10 L26,16"
+                                      Stroke="#00FF00"
+                                      StrokeThickness="2"
+                                      Fill="Transparent"/>
+
+                                    <Ellipse Canvas.Left="8" Canvas.Top="5" Width="12" Height="12" Stroke="#FF0000" StrokeThickness="2"/>
+                                    <Line X1="5" Y1="11" X2="23" Y2="11" Stroke="#FF0000" StrokeThickness="1.5"/>
+                                    <Line X1="14" Y1="2" X2="14" Y2="20" Stroke="#FF0000" StrokeThickness="1.5"/>
+                                    <Ellipse Canvas.Left="13" Canvas.Top="10" Width="2" Height="2" Fill="Black"/>
+                                </Canvas>
+                            </Viewbox>
+
+                        </ToggleButton>
                         <ToggleButton IsChecked="{Binding DisplayVM.IsGridVisible}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Show/Hide Grid">
                             <Image Source="/Resources/Sheet_32.png" Width="18"/>
                         </ToggleButton>

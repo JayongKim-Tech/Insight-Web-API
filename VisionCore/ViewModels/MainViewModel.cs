@@ -49,7 +49,7 @@ public class MainViewModel : ViewModelBase
 
             Logger.Info($"센서 연결 시도 중...{Settings.IP}:{Settings.Port}");
 
-            await controlModel.ConnectAsync(controlModel.IsInSightSensor, $"{Settings.IP}:{Settings.Port}", $"{Settings.User}", $"{Settings.Password}");
+            await controlModel.ConnectAsync($"{Settings.IP}:{Settings.Port}", $"{Settings.User}", $"{Settings.Password}");
 
             if (controlModel.IsInSightSensor.Connected)
             {

@@ -1,5 +1,6 @@
 ﻿using Cognex.InSight.Remoting.Serialization;
 using Cognex.InSight.Web;
+using Cognex.InSight.Web.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,10 +16,11 @@ namespace VisionCore.Models
         public static CameraControlModel Instance => _instance ?? (_instance = new CameraControlModel());
 
         public CvsInSight IsInSightSensor { get; } = new CvsInSight();
+        public CvsDisplay cvsDisplay { get; } = new CvsDisplay();
         private CameraControlModel() { }
 
         #region 카메라 통신
-        public async Task<bool> ConnectAsync(CvsInSight InSightSensor, string ip, string user, string password)
+        public async Task<bool> ConnectAsync(string ip, string user, string password)
         {
             try
             {
@@ -28,9 +30,9 @@ namespace VisionCore.Models
                     CellNames = new string[1] { "A0:Z599" }, // Designating a cell range requires 6.3 or newer firmware
                 };
 
-                await InSightSensor.Connect(ip, user, password, sessionInfo);
+                await IsInSightSensor.Connect(ip, user, password, sessionInfo);
 
-                return InSightSensor.Connected;
+                return IsInSightSensor.Connected;
             }
             catch (Exception ex)
             {

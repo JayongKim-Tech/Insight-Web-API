@@ -72,6 +72,9 @@
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="websocket-sharp-standard, Version=1.0.3.0, Culture=neutral, PublicKeyToken=5660b08a1845a91e, processorArchitecture=MSIL">
+      <HintPath>packages\WebSocketSharp.Standard.1.0.3\lib\netstandard2.0\websocket-sharp-standard.dll</HintPath>
+    </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -430,17 +433,17 @@
     <Resource Include="Resources\Window.32.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:\Work\HS\InSightWebSDK-25.3.0\SampleCode\dotnet\WindowsFormsApp\Cognex.InSight.Web.Controls\Cognex.InSight.Web.Controls.csproj">
-      <Project>{eb0cc15f-005b-4d69-f1d5-cb7899741598}</Project>
-      <Name>Cognex.InSight.Web.Controls</Name>
-    </ProjectReference>
-    <ProjectReference Include="D:\Work\HS\InSightWebSDK-25.3.0\SampleCode\dotnet\WindowsFormsApp\Cognex.InSight.Web\Cognex.InSight.Web.csproj">
-      <Project>{69b1e0b6-1ce4-d5bd-fed6-82f2c7d187f5}</Project>
-      <Name>Cognex.InSight.Web</Name>
-    </ProjectReference>
+    <Folder Include="Resources\redColor\" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Resources\redColor\" />
+    <ProjectReference Include="Cognex.InSight.Web.Controls\Cognex.InSight.Web.Controls.csproj">
+      <Project>{4e3fc8b1-40f0-d3d6-dab7-db96245b68b4}</Project>
+      <Name>Cognex.InSight.Web.Controls</Name>
+    </ProjectReference>
+    <ProjectReference Include="Cognex.InSight.Web\Cognex.InSight.Web.csproj">
+      <Project>{44a114ea-1dd8-9d5b-6e00-8aad919278d0}</Project>
+      <Name>Cognex.InSight.Web</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

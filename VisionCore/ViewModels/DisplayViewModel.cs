@@ -10,8 +10,10 @@ namespace VisionCore.ViewModels
 {
     public class DisplayViewModel : ViewModelBase
     {
+        public CameraControlModel CameraControl => CameraControlModel.Instance;
 
         private bool _isGridVisible = false;
+
         public bool IsGridVisible
         {
             get { return _isGridVisible; }
@@ -29,6 +31,29 @@ namespace VisionCore.ViewModels
                 else
                 {
                     Logger.Info("스프레드시트 편집 창을 숨깁니다.");
+                }
+            }
+        }
+
+        private bool _isGraphicVisible = false;
+        public bool IsGraphicVisible
+        {
+            get { return _isGraphicVisible; }
+            set
+            {
+                if (_isGraphicVisible == value) return;
+
+                _isGraphicVisible = value;
+                OnPropertyChanged();
+
+                if (_isGraphicVisible)
+                {
+
+                    Logger.Info("그래픽을 표시합니다.");
+                }
+                else
+                {
+                    Logger.Info("그래픽을 숨깁니다.");
                 }
             }
         }
