@@ -11,7 +11,6 @@ namespace VisionCore.ViewModels
     public class DisplayViewModel : ViewModelBase
     {
         public CameraControlModel CameraControl => CameraControlModel.Instance;
-
         private bool _isGridVisible = false;
 
         public bool IsGridVisible
@@ -35,7 +34,7 @@ namespace VisionCore.ViewModels
             }
         }
 
-        private bool _isGraphicVisible = false;
+        private bool _isGraphicVisible = true;
         public bool IsGraphicVisible
         {
             get { return _isGraphicVisible; }
@@ -48,11 +47,12 @@ namespace VisionCore.ViewModels
 
                 if (_isGraphicVisible)
                 {
-
+                    CameraControl.cvsDisplay.ToggleOverlay(_isGraphicVisible);
                     Logger.Info("그래픽을 표시합니다.");
                 }
                 else
                 {
+                    CameraControl.cvsDisplay.ToggleOverlay(_isGraphicVisible);
                     Logger.Info("그래픽을 숨깁니다.");
                 }
             }
