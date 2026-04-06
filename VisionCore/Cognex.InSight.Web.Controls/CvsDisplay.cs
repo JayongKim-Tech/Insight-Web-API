@@ -135,7 +135,7 @@ namespace Cognex.InSight.Web.Controls
                 return;
             }
 
-            // 2. [수정] 윈도우가 지정한 일부 영역이 아닌 전체 영역 크기를 참조 (ClientSize)
+            // kimjy 일부 영역이 아닌 전체 영역 크기를 참조
             int picWidth = pb.ClientSize.Width;
             int picHeight = pb.ClientSize.Height;
 
@@ -178,7 +178,7 @@ namespace Cognex.InSight.Web.Controls
                 endY = (int)(endY * scaleFactor);
             }
 
-            // 해상도 팩터 적용 (아까 1로 설정하셨던 부분 유지)
+            // 해상도 팩터 적용
             const int resolutionFactor = 1;
             scaleFactor = scaleFactor / resolutionFactor;
 
@@ -232,9 +232,7 @@ namespace Cognex.InSight.Web.Controls
             }
         }
 
-        /// <summary>
-        /// WPF에서 호출하여 그래픽을 켜고 끄는 인터페이스
-        /// </summary>
+
         public void ToggleOverlay(bool isVisible)
         {
             IsDrawingEnabled = isVisible;

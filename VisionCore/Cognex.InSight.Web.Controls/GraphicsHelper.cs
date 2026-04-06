@@ -562,10 +562,12 @@ namespace Cognex.InSight.Web.Controls
     {
       // you should perform some scale functions!!!
       SizeF RealSize = g.MeasureString(longString, PreferedFont);
-      float HeightScaleRatio = Room.Height / RealSize.Height;
-      float WidthScaleRatio = Room.Width / RealSize.Width;
+            //float HeightScaleRatio = Room.Height / RealSize.Height;
+            //float WidthScaleRatio = Room.Width / RealSize.Width;
+            float HeightScaleRatio = 1;
+            float WidthScaleRatio = 1;
 
-      float ScaleRatio = (HeightScaleRatio < WidthScaleRatio)
+            float ScaleRatio = (HeightScaleRatio < WidthScaleRatio)
          ? ScaleRatio = HeightScaleRatio
          : ScaleRatio = WidthScaleRatio;
 
