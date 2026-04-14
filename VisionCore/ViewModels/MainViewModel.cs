@@ -55,6 +55,11 @@ public class MainViewModel : ViewModelBase
             {
                 // 카메라 Online 상태 동기화
                 IsOnline = controlModel.IsInSightSensor.Online;
+
+                //연결 성공시 카메라 Event 등록
+                controlModel.IsInSightSensor.ResultsChanged += OnSensorResultsChanged;
+
+
                 OnPropertyChanged(nameof(controlModel.IsInSightSensor));
 
                 Logger.Success($"센서 연결 성공!");
@@ -74,6 +79,11 @@ public class MainViewModel : ViewModelBase
         if (controlModel.IsInSightSensor != null && controlModel.IsInSightSensor.Connected)
         {
             Logger.Info("센서 연결 해제 중...");
+
+            //메모리 리크 방지
+            controlModel.IsInSightSensor.ResultsChanged -= OnSensorResultsChanged;
+
+
             await controlModel.DisconnectAsync(controlModel.IsInSightSensor);
             Logger.Info("센서 연결 해제 완료.");
         }
@@ -120,10 +130,7 @@ public class MainViewModel : ViewModelBase
         {
             Logger.Error($"상태 변경 오류: {ex.Message}");
 
-            if (targetValue)
-            {
-                _isOnline = !targetValue;
-            }
+            _isOnline = !targetValue;
 
             OnPropertyChanged(nameof(IsOnline));
         }
@@ -183,6 +190,14 @@ public class MainViewModel : ViewModelBase
         }
 
 
+    }
+    private async void OnSensorResultsChanged(object sender, EventArgs e)
+    {
+        string imageUri = controlModel.IsInSightSensor.GetMainImageUrl();
+
+        _ = fileManagerModel.SaveCurrentSensorImage(imageUri);
+
+        // Log("이미지 저장 프로세스 시작...", LogLevel.Debug);
     }
 
 

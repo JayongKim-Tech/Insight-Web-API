@@ -1,6 +1,7 @@
 ﻿using Cognex.InSight.Remoting.Serialization;
 using Cognex.InSight.Web;
 using Cognex.InSight.Web.Controls;
+using Newtonsoft.Json.Bson;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +32,6 @@ namespace VisionCore.Models
                 };
 
                 await IsInSightSensor.Connect(ip, user, password, sessionInfo);
-
                 return IsInSightSensor.Connected;
             }
             catch (Exception ex)
@@ -57,6 +57,8 @@ namespace VisionCore.Models
         }
 
         #endregion
+
+
 
     }
 }

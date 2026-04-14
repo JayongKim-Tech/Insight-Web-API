@@ -124,7 +124,6 @@ namespace Cognex.InSight.Web.Controls
             // 1. 그래픽 On/Off 체크 및 이미지 유무 확인
             if (!IsDrawingEnabled || img == null)
             {
-                gr.Clear(pb.BackColor);
                 return;
             }
 

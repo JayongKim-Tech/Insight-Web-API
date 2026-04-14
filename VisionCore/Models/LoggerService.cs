@@ -51,7 +51,7 @@ namespace VisionCore.Models
                     LogColor = GetColor(level)
                 };
 
-                LogMessages.Add(newEntry);
+                LogMessages.Insert(0,newEntry);
 
                 if (LogMessages.Count > 1000) LogMessages.RemoveAt(0);
             });

@@ -153,9 +153,11 @@
             </Border>
 
             <Grid Grid.Row="2" Background="Black">
-                <wfi:WindowsFormsHost behaviors:InSightBehavior.SensorSource="{Binding controlModel.IsInSightSensor}">
-                    <cognex_controls:CvsDisplay x:Name="cvsDisplay"/>
+                <wfi:WindowsFormsHost behaviors:InSightBehavior.SensorSource="{Binding controlModel.IsInSightSensor}"
+                            behaviors:InSightBehavior.IsOverlayVisible="{Binding DisplayVM.IsGraphicVisible}">
+                            <cognex_controls:CvsDisplay x:Name="cvsDisplay"/>
                 </wfi:WindowsFormsHost>
+
 
                 <wfi:WindowsFormsHost Margin="30" Opacity="0.95"
                               Visibility="{Binding DisplayVM.IsGridVisible, Converter={StaticResource BoolToVis}}"
@@ -163,6 +165,8 @@
                     <cognex_controls:CvsSpreadsheet x:Name="cvsSpreadsheet"/>
                 </wfi:WindowsFormsHost>
             </Grid>
+
+
 
             <GridSplitter Grid.Row="3" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center"
                   Background="#333333" ShowsPreview="True" ResizeBehavior="PreviousAndNext"/>

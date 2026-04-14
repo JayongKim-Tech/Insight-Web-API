@@ -985,7 +985,10 @@ namespace Cognex.InSight.Web.Controls
       double h = mRegion.Height;
 
       // calculate phi: the bend amount of the region
-      double phi = Math.Abs(mRegion.Curve) * Math.PI / 180.0; //영역 Curve값은 무조건 양수로 나와야함.. 임시로 절대값으로 수정
+      double phi = mRegion.Curve * Math.PI / 180.0;
+
+
+      double sign = (phi < 0) ? -1.0 : 1.0; // Kimjy Phi 값의 따른 부호 예외처리(phi = radian)
 
       // calculate distance from origin to curve center point
       // circumfrence = width = phi * radius
@@ -993,12 +996,12 @@ namespace Cognex.InSight.Web.Controls
       // add height/2 to adjust from center of height to origin of rect
       if (mUsesXYCoordinates)
       {
-        mCurveDimensions.CurveRadiusTop = (w / phi) + (h / 2.0);
+        mCurveDimensions.CurveRadiusTop = (w / phi) * sign;
         mCurveDimensions.CurveRadiusBottom = mCurveDimensions.CurveRadiusTop - h;
       }
       else
       {
-        mCurveDimensions.CurveRadiusTop = - (- (w / phi) + (h / 2.0));
+        mCurveDimensions.CurveRadiusTop = -(w / phi) * sign;
         mCurveDimensions.CurveRadiusBottom = mCurveDimensions.CurveRadiusTop + h;
       }
 
@@ -1006,13 +1009,13 @@ namespace Cognex.InSight.Web.Controls
       // since radius is taken from center of height of
       if (mUsesXYCoordinates)
       {
-        mCurveDimensions.CurveCenter.X = (float)(x - mCurveDimensions.CurveRadiusTop * sinr);
-        mCurveDimensions.CurveCenter.Y = (float)(y + mCurveDimensions.CurveRadiusTop * cosr);
+        mCurveDimensions.CurveCenter.X = (float)(x - sign * mCurveDimensions.CurveRadiusTop * sinr);
+        mCurveDimensions.CurveCenter.Y = (float)(y + sign * mCurveDimensions.CurveRadiusTop * cosr);
       }
       else
       {
-        mCurveDimensions.CurveCenter.X = (float)(x + mCurveDimensions.CurveRadiusTop * sinr);
-        mCurveDimensions.CurveCenter.Y = (float)(y - mCurveDimensions.CurveRadiusTop * cosr);
+        mCurveDimensions.CurveCenter.X = (float)(x + (sign * mCurveDimensions.CurveRadiusTop * sinr));
+        mCurveDimensions.CurveCenter.Y = (float)(y - (sign * mCurveDimensions.CurveRadiusTop * cosr));
       }
 
       double phi0;

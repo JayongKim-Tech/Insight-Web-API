@@ -13,7 +13,7 @@ namespace Cognex.InSight.Web
 {
   /// <summary>
   /// A class that holds a connection to a camera and provides an abstraction for the HMI API.
-  /// 
+  ///
   /// When the Connect method of this class is called, and HmiSession is created and the
   /// user is logged in. Calling the SendReady method will update the Results.
   /// </summary>
@@ -152,7 +152,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Constructs a new instance.
-    /// 
+    ///
     /// The object contructed is not connected; Call "Connect" to open the connection.
     /// </summary>
     public CvsInSight()
@@ -175,7 +175,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// The <c>StateChanged</c> event is raised when any of the state-related properties changed.
-    /// 
+    ///
     /// The related properties include:
     /// <see cref="Online"/>, <see cref="SoftOnline"/>, <see cref="NativeOnline"/>, <see cref="DiscreteOnline"/>
     /// </summary>
@@ -238,7 +238,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Gets the SoftOnline flag.
-    /// 
+    ///
     /// Note: The camera will not go online unless SoftOnline, NativeOnline, and DiscreteOnline are all true.
     /// </summary>
     public bool SoftOnline
@@ -248,7 +248,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Sets the SoftOnline flag.
-    /// 
+    ///
     /// Note: The camera will not go online unless SoftOnline, NativeOnline, DiscreteOnline, and FfpOnline are all true.
     /// </summary>
     /// <param name="value">Set to true to go online</param>
@@ -273,7 +273,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Gets NativeOnline flag that designates whether Native Mode is preventing the camera from going online.
-    /// 
+    ///
     /// Note: The camera will not go online unless SoftOnline, NativeOnline, DiscreteOnline, and FfpOnline are all true.
     /// </summary>
     public bool NativeOnline
@@ -283,7 +283,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Gets DiscreteOnline flag that designates whether Discrete I/O is preventing the camera from going online.
-    /// 
+    ///
     /// Note: The camera will not go online unless SoftOnline, NativeOnline, DiscreteOnline, and FfpOnline are all true.
     /// </summary>
     public bool DiscreteOnline
@@ -293,7 +293,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Gets the FfpOnline flag that designates whether FFP is preventing the camera from going online.
-    /// 
+    ///
     /// Note: The camera will not go online unless SoftOnline, NativeOnline, DiscreteOnline, and FfpOnline are all true.
     /// </summary>
     public bool FfpOnline
@@ -335,7 +335,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Sets the Live Mode flag.
-    /// 
+    ///
     /// Note: The camera will not go int Live Mode unless the sensor is offline.
     /// </summary>
     /// <param name="value">Set to true to go online</param>
@@ -392,7 +392,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Gets the job info (i.e. all properties in the 'job' node).
-    /// 
+    ///
     /// Note: This is not the cells, but the other information that is stored with the job.
     /// </summary>
     public JToken JobInfo
@@ -403,7 +403,7 @@ namespace Cognex.InSight.Web
     /// <summary>
     /// Gets the custom view settings that are stored in the job.
     /// </summary>
-    public HmiCustomViewSettings[] CustomViewSettings 
+    public HmiCustomViewSettings[] CustomViewSettings
     {
       get { return _customViewSettingsList; }
     }
@@ -438,7 +438,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Gets the settings that are stored on the camera (i.e. all properties in the 'settings' node).
-    /// 
+    ///
     /// Note: This is does not include items that are stored in the job.
     /// </summary>
     public JToken Settings
@@ -489,7 +489,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Gets the last results received.
-    /// 
+    ///
     /// The contents of the object will be an HmiResult.
     /// Calling "SendReady" will raise a ResultChanged event and update these results.
     /// </summary>
@@ -674,7 +674,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Connects to the device, opening a CogSocket connection.
-    /// 
+    ///
     /// The method will also create an HmiSession and login to it.
     /// </summary>
     /// <param name="address">The IP address and port</param>
@@ -755,7 +755,7 @@ namespace Cognex.InSight.Web
 
         string[] capabilities = _cvsCameraInfo.Capabilities;
         _usesXYCoordinates = Array.Find<string>(capabilities, element => element == "xyCoordinates") != null;
-        
+
         // Get the job info (Not the cells, but the other information stored with the job)
         await RequestJobInfo();
 
@@ -887,7 +887,7 @@ namespace Cognex.InSight.Web
       {
         _keepAliveTimer.Stop();
       }
-      
+
       if (_cogSocket != null)
       {
         _cogSocket.Closed -= _cogSocket_Closed;
@@ -939,7 +939,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Sends the 'ready' message to allow the results to be updated.
-    /// 
+    ///
     /// Note: This performs the same operation as "AcceptUpdate" in the In-Sight SDK.
     /// </summary>
     public async Task SendReady()
@@ -959,7 +959,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Sends the new cell value for a cell.
-    /// 
+    ///
     /// Note: This replaces these ISDK methods:
     /// ClickButton, SetCheckBox, SetFloat, SetInteger, SetListBoxIndex, SetString, SetEditGraphic
     /// </summary>
@@ -973,7 +973,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Sends the new expression for a cell.
-    /// 
+    ///
     /// Note: This replaces these ISDK method: SetExpression
     /// </summary>
     /// <param name="cellName">The name of the cell or the location</param>
@@ -1000,7 +1000,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Begins an edit operation for a cell with an edit graphic.
-    /// 
+    ///
     /// This method should be called before setting the cell value for the graphic.
     /// When complete, the EndEdit method should be called.
     /// </summary>
@@ -1014,7 +1014,7 @@ namespace Cognex.InSight.Web
 
     /// <summary>
     /// Ends an edit operation.
-    /// 
+    ///
     /// This method should be called after a graphic is done being edited and
     /// it is expected that beginEdit was called prior to this.
     /// </summary>
@@ -1024,7 +1024,7 @@ namespace Cognex.InSight.Web
       await _cogSocket.PostAsync(_sessionIDPath + _endEditPath, args).ConfigureAwait(false);
     }
 
-        
+
     /// <summary>
     /// Gets the latest result from the camera
     /// </summary>
@@ -1034,6 +1034,7 @@ namespace Cognex.InSight.Web
       object result = await _cogSocket.PostAsync(_sessionIDPath + _getLatestResultPath, args).ConfigureAwait(false);
 
       UpdateResults((JToken)result);
+
     }
 
     /// <summary>
@@ -1053,7 +1054,7 @@ namespace Cognex.InSight.Web
     public async Task LoadJobData(string filename)
     {
       byte[] bytes = File.ReadAllBytes(filename);
-      
+
       HmiNamedContent namedContent = new HmiNamedContent();
       namedContent.Name = Path.GetFileName(filename);
       namedContent.Content = System.Convert.ToBase64String(bytes);
@@ -1138,7 +1139,7 @@ namespace Cognex.InSight.Web
           string json = await sr.ReadToEndAsync();
           StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
           HttpResponseMessage msg = await _httpClient.PostAsync(url, httpContent);
-          
+
         }
       }
       catch (Exception ex)
@@ -1177,7 +1178,7 @@ namespace Cognex.InSight.Web
     /// <returns>An array of cell results for the current results held by the session</returns>
     /// <remarks>
     /// The following code can be used to display a range of cells to the Console:
-    /// 
+    ///
     /// Console.WriteLine("QueryCellResults:");
     /// object[] cells = await QueryCellResults("A0:Z399");
     /// foreach (object cell in cells)
@@ -1230,7 +1231,7 @@ namespace Cognex.InSight.Web
         Debug.WriteLine($"KeepAlive Error: {ex.Message}");
       }
     }
-      
+
     /// <summary>
     /// Handles the ResultsChanged event from the CogSocket and forwards it.
     /// </summary>
@@ -1305,7 +1306,7 @@ namespace Cognex.InSight.Web
     private void HandleLiveModeChanged(object sender, CogSocketEventArgs args)
     {
       try
-      { 
+      {
         bool? isLiveMode = args.Args[0] as bool?;
         _isLiveMode = isLiveMode.HasValue ? isLiveMode.Value : false;
 
@@ -1319,7 +1320,7 @@ namespace Cognex.InSight.Web
         Debug.WriteLine($"HandleLiveModeChanged: {ex.Message}");
       }
     }
-  
+
     /// <summary>
     /// Requests the latest 'job' node.
     /// </summary>
@@ -1343,12 +1344,12 @@ namespace Cognex.InSight.Web
     private async void HandleJobInfoChanged(object sender, CogSocketEventArgs args)
     {
       try
-      { 
+      {
         // Update _jobInfo
         await RequestJobInfo().ConfigureAwait(false);
 
         if (JobInfoChanged != null)
-        { 
+        {
           JobInfoChanged(this, EventArgs.Empty); // Propagate the event
         }
       }

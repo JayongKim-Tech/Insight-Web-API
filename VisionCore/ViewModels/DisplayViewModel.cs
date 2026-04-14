@@ -1,4 +1,5 @@
 ﻿using Cognex.InSight.Web;
+using Cognex.InSight.Web.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,16 +48,16 @@ namespace VisionCore.ViewModels
 
                 if (_isGraphicVisible)
                 {
-                    CameraControl.cvsDisplay.ToggleOverlay(_isGraphicVisible);
                     Logger.Info("그래픽을 표시합니다.");
                 }
                 else
                 {
-                    CameraControl.cvsDisplay.ToggleOverlay(_isGraphicVisible);
                     Logger.Info("그래픽을 숨깁니다.");
+
                 }
             }
         }
+
 
     }
 }

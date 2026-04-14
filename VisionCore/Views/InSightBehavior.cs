@@ -33,7 +33,6 @@ namespace VisionCore.Views
 
                         sensor.ResultsChanged += async (s, ev) =>
                         {
-
                             display.InitDisplay();
 
                             await display.OnConnected();
@@ -70,5 +69,22 @@ namespace VisionCore.Views
                 }
             }
         }
+        public static bool GetIsOverlayVisible(DependencyObject obj) => (bool)obj.GetValue(IsOverlayVisibleProperty);
+        public static void SetIsOverlayVisible(DependencyObject obj, bool value) => obj.SetValue(IsOverlayVisibleProperty, value);
+        public static readonly DependencyProperty IsOverlayVisibleProperty =
+            DependencyProperty.RegisterAttached(
+                "IsOverlayVisible",
+                typeof(bool),
+                typeof(InSightBehavior),
+                new PropertyMetadata(true, OnIsOverlayVisibleChanged));
+
+        private static void OnIsOverlayVisibleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is WindowsFormsHost host && host.Child is CvsDisplay display)
+            {
+                display.ToggleOverlay((bool)e.NewValue);
+            }
+        }
+
     }
 }
