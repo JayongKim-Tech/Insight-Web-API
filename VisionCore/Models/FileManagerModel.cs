@@ -9,10 +9,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.Remoting.Channels;
-using System.Security.Policy;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace VisionCore.Models
@@ -34,7 +31,6 @@ namespace VisionCore.Models
         {
             public string ImgUri { get; set; }
             public string Path { get; set; }
-            public string FileName { get; set; }
         }
 
         // queue 생성
@@ -158,14 +154,13 @@ namespace VisionCore.Models
                     if (_saveQueue.TryDequeue(out var item))
                     {
 
-                        string dirPath = Path.GetDirectoryName(item.Path);
+                        string PullPath = Path.GetDirectoryName(item.Path);
 
-                        if (!Directory.Exists(dirPath))
+                        if (!Directory.Exists(PullPath))
                         {
-                            Directory.CreateDirectory(dirPath);
+                            Directory.CreateDirectory(PullPath);
                         }
 
-                        string filename = Path.Combine(dirPath, item.FileName);
 
                         byte[] bytes = await _httpClient.GetByteArrayAsync(item.ImgUri);
 
@@ -173,7 +168,8 @@ namespace VisionCore.Models
                         {
                             using (Bitmap bitmap = new Bitmap(ms))
                             {
-                                bitmap.Save(filename, ImageFormat.Jpeg);
+                                bitmap.Save(item.Path, ImageFormat.Jpeg);
+                                bitmap.Dispose();
                             }
                         }
 
@@ -231,17 +227,17 @@ namespace VisionCore.Models
                 // 일
                 string day = DateTime.Now.ToString("dd");
 
-                // 저장 경로 조합
-                string directoryPath = Path.Combine(exePath, "VisionImage", year, month, day, model, position, result);
-
                 // 파일명
                 string fileName = $"{DateTime.Now:HH-mm-ss-fff}.jpg";
+
+                // 저장 경로 조합
+                string directoryPath = Path.Combine(exePath, "VisionImage", year, month, day, model, position, result, fileName);
+
 
                 var info = new SaveInfo
                 {
                     ImgUri = imageUri,
                     Path = directoryPath,
-                    FileName = fileName
                 };
 
                 _saveQueue.Enqueue(info);

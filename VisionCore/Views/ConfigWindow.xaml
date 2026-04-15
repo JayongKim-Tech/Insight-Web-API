@@ -49,27 +49,74 @@
                 </DockPanel>
             </Border>
 
-            <ScrollViewer Grid.Row="1" Margin="25,25,25,0" VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <TextBlock Text="NETWORK SETTINGS" Style="{StaticResource HeaderLabel}"/>
+            <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="10,10,10,0">
+                <TabControl.Resources>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabItem">
+                                    <Border x:Name="Border" Margin="0,0,10,0" Padding="15,8"
+                                BorderBrush="Transparent" BorderThickness="0,0,0,2">
+                                        <ContentPresenter x:Name="ContentSite" ContentSource="Header"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <ContentPresenter.Resources>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#888888"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                    <Setter Property="FontSize" Value="12"/>
+                                                </Style>
+                                            </ContentPresenter.Resources>
+                                        </ContentPresenter>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Border" Property="BorderBrush" Value="LimeGreen"/>
+                                            <Setter Property="Panel.ZIndex" Value="100"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TabControl.Resources>
 
-                    <TextBlock Text="IP ADDRESS" Style="{StaticResource InputLabel}"/>
-                    <TextBox Text="{Binding Settings.IP}"/>
+                <TabItem Header="NETWORK">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="15,20,15,0">
+                        <StackPanel>
+                            <TextBlock Text="NETWORK SETTINGS" Style="{StaticResource HeaderLabel}"/>
+                            <TextBlock Text="IP ADDRESS" Style="{StaticResource InputLabel}"/>
+                            <TextBox Text="{Binding Settings.IP, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="PORT NUMBER" Style="{StaticResource InputLabel}"/>
-                    <TextBox Text="{Binding Settings.Port}"/>
+                            <TextBlock Text="PORT NUMBER" Style="{StaticResource InputLabel}"/>
+                            <TextBox Text="{Binding Settings.Port, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <Rectangle Height="1" Fill="#333333" Margin="0,5,0,25"/>
+                            <TextBlock Text="ADMIN USER" Style="{StaticResource InputLabel}"/>
+                            <TextBox Text="{Binding Settings.User, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="AUTHENTICATION" Style="{StaticResource HeaderLabel}"/>
+                            <TextBlock Text="PASSWORD" Style="{StaticResource InputLabel}"/>
+                            <TextBox Text="{Binding Settings.Password, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
 
-                    <TextBlock Text="ADMIN USER" Style="{StaticResource InputLabel}"/>
-                    <TextBox Text="{Binding Settings.User}"/>
+                <TabItem Header="CELL POS">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="15,20,15,0">
+                        <StackPanel>
+                            <TextBlock Text="CELL POSITION SETTINGS" Style="{StaticResource HeaderLabel}"/>
 
-                    <TextBlock Text="PASSWORD" Style="{StaticResource InputLabel}"/>
-                    <TextBox Text="{Binding Settings.Password}"/>
-                </StackPanel>
-            </ScrollViewer>
+                            <TextBlock Text="MODEL NAME CELL" Style="{StaticResource InputLabel}"/>
+                            <TextBox Text="{Binding Settings.CellModelName, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="POSITION CELL" Style="{StaticResource InputLabel}"/>
+                            <TextBox Text="{Binding Settings.CellPosition, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="RESULT CELL" Style="{StaticResource InputLabel}"/>
+                            <TextBox Text="{Binding Settings.CellResult, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
 
             <Border Grid.Row="2" Background="#252525">
                 <Button Content="SAVE SETTINGS" Command="{Binding SaveCommand}"

@@ -1,11 +1,13 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Cognex.InSight.Remoting.Serialization;
+using Newtonsoft.Json.Linq;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Cognex.InSight.Remoting.Serialization;
 
 namespace Cognex.InSight.Web.Controls
 {
@@ -21,6 +23,7 @@ namespace Cognex.InSight.Web.Controls
         // WPF 그래픽 On/Off 스위치
         public bool IsDrawingEnabled { get; set; } = true;
 
+        private static readonly HttpClient _httpClient = new HttpClient();
         public CvsDisplay()
         {
             InitializeComponent();
@@ -72,7 +75,7 @@ namespace Cognex.InSight.Web.Controls
 
             // Note: This event will arrive on a worker thread.
             // Before a windows control is directly updated, invoke to the main SynchronizationContext
-            picBox.Invoke((Action)delegate
+            picBox.Invoke((Action)async delegate
             {
                 int imageWidth = 0;
                 int imageHeight = 0;
@@ -84,15 +87,41 @@ namespace Cognex.InSight.Web.Controls
                     imageHeight = viewPort.Height;
                 }
 
-                string url = _inSight.GetMainImageUrl(imageWidth, imageHeight);
+                string url = _inSight.GetMainImageUrl(viewPort.Width, viewPort.Height);
+                if (string.IsNullOrEmpty(url)) return;
 
-                if (picBox.ImageLocation != url)
+                try
                 {
-                    picBox.LoadAsync(url);
+                    byte[] imageBytes = await _httpClient.GetByteArrayAsync(url);
+
+                    using (MemoryStream ms = new MemoryStream(imageBytes))
+                    {
+                        using (Bitmap tempImg = new Bitmap(ms))
+                        {
+                            Bitmap newImg = new Bitmap(tempImg);
+
+                            picBox.Invoke((Action)delegate
+                            {
+                                var oldImg = picBox.Image;
+                                picBox.Image = newImg;
+                                oldImg?.Dispose();
+                            });
+                        }
+
+                    }
                 }
-                else
+
+                catch (Exception ex)
                 {
-                    Task.Run(() => SendReady());
+                    Debug.WriteLine($"Image Sync Error: {ex.Message}");
+                }
+
+                finally
+                {
+                    _graphics = _nextGraphics;
+                    await Task.Run(() => SendReady());
+                    picBox.Invalidate();
+
                 }
             });
         }
