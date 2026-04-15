@@ -1,9 +1,18 @@
 ﻿using Cognex.InSight.Web;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Runtime.Remoting.Channels;
+using System.Security.Policy;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace VisionCore.Models
@@ -16,21 +25,32 @@ namespace VisionCore.Models
         public string FullPath { get; set; }
         public bool IsSensorFile { get; set; }
 
-
     }
 
     public class FileManagerModel
     {
-        public string ModelName;
-        public string Position;
-        public string Result;
+
+        public class SaveInfo
+        {
+            public string ImgUri { get; set; }
+            public string Path { get; set; }
+            public string FileName { get; set; }
+        }
+
+        // queue 생성
+        private ConcurrentQueue<SaveInfo> _saveQueue = new ConcurrentQueue<SaveInfo>();
 
         private static FileManagerModel _instance;
         public static FileManagerModel Instance => _instance ?? (_instance = new FileManagerModel());
         public CameraControlModel controlModel => CameraControlModel.Instance;
         public ConfigModel configModel => ConfigModel.Instance;
+
+        private static readonly HttpClient _httpClient = new HttpClient();
         private FileManagerModel()
         {
+            Thread thread = new Thread(new ThreadStart(SaveCurrentSensorImage));
+            thread.IsBackground = true;
+            thread.Start();
 
         }
 
@@ -127,46 +147,49 @@ namespace VisionCore.Models
         #endregion
 
         #region 결과 이미지 저장
-        public async Task SaveCurrentSensorImage(string imageUri)
+        public async void SaveCurrentSensorImage()
         {
-            try
+
+            while (true)
             {
-                await GetCellValueAsync();
+                try
+                {
+                    //선입선출
+                    if (_saveQueue.TryDequeue(out var item))
+                    {
 
-                string exePath = AppDomain.CurrentDomain.BaseDirectory; // 실행파일 위치
-                string year = DateTime.Now.ToString("yyyy");
-                string monthDay = DateTime.Now.ToString("MMdd");
+                        string dirPath = Path.GetDirectoryName(item.Path);
 
-                // 경로 합치기: 실행파일 - VisionImage - 년도 - 월일 - Model - Position - OK/NG
-                string directoryPath = Path.Combine(exePath, "VisionImage", year, monthDay, ModelName, Position, Result);
+                        if (!Directory.Exists(dirPath))
+                        {
+                            Directory.CreateDirectory(dirPath);
+                        }
 
-                // 폴더가 없으면 생성
-                if (!Directory.Exists(directoryPath))
-                    Directory.CreateDirectory(directoryPath);
+                        string filename = Path.Combine(dirPath, item.FileName);
 
-                // 3. 파일명 설정 (임시 image1, 나중에 Cell 값으로 변경 가능)
-                string fileName = $"{DateTime.Now.ToString("yyyy-mm-dd-ss")}";
-                // string fileName = results.GetCellValue("A13")?.ToString() + ".jpg";
+                        byte[] bytes = await _httpClient.GetByteArrayAsync(item.ImgUri);
 
-                string fullPath = Path.Combine(directoryPath, fileName);
+                        using (MemoryStream ms = new MemoryStream(bytes))
+                        {
+                            using (Bitmap bitmap = new Bitmap(ms))
+                            {
+                                bitmap.Save(filename, ImageFormat.Jpeg);
+                            }
+                        }
 
-                // 4. imageUri를 Bitmap으로 변환하여 저장
-                //using (WebClient client = new WebClient())
-                //{
-                //    byte[] imageData = await client.DownloadDataTaskAsync(imageUri);
-                //    using (MemoryStream ms = new MemoryStream(imageData))
-                //    {
-                //        using (Bitmap bitmap = new Bitmap(ms))
-                //        {
-                //             5. 이미지 저장 (품질 설정을 더할 수도 있음)
-                //            bitmap.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
-                //        }
-                //    }
-                //}
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"이미지 저장 중 오류 발생: {ex.Message}");
+                        Logger.Info("Image 저장 완료");
+                    }
+                    else
+                    {
+                        //과부하 방지..
+                        await Task.Delay(100);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex.Message);
+                    await Task.Delay(1000);
+                }
             }
         }
 
@@ -176,33 +199,58 @@ namespace VisionCore.Models
         #region Json 데이터 전처리
 
 
-        public async Task GetCellValueAsync()
+        public async Task GetCellValueAsync(string imageUri)
         {
-
             //Result값 업데이트
             await controlModel.IsInSightSensor.GetLatestResult();
 
-            JToken results = controlModel.IsInSightSensor.Results;
-
-            //Cell값만 가져오기
-            var cellList = results["cells"] as JArray;
-
             try
             {
-                ModelName = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellModelName)?["data"]?.ToString() ?? "DefaultModel";
+                JToken results = controlModel.IsInSightSensor.Results;
 
-                // 현재 포지션 (E9)
-                Position = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellPosition)?["data"]?.ToString() ?? "0";
+                var cellList = results["cells"] as JArray;
 
-                // 현재 판정 결과 (I11)
-                Result = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellResult)?["data"]?.ToString() ?? "NG";
+                // 현재 모델
+                string model = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellModelName)?["data"]?.ToString() ?? "DefaultModel";
+
+                // 현재 포지션
+                string position = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellPosition)?["data"]?.ToString() ?? "0";
+
+                // 현재 판정 결과
+                string result = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellResult)?["data"]?.ToString() ?? "NG";
+
+                // 실행파일 경로
+                string exePath = AppDomain.CurrentDomain.BaseDirectory;
+
+                // 년도
+                string year = DateTime.Now.ToString("yyyy");
+
+                // 월
+                string month = DateTime.Now.ToString("MM");
+
+                // 일
+                string day = DateTime.Now.ToString("dd");
+
+                // 저장 경로 조합
+                string directoryPath = Path.Combine(exePath, "VisionImage", year, month, day, model, position, result);
+
+                // 파일명
+                string fileName = $"{DateTime.Now:HH-mm-ss-fff}.jpg";
+
+                var info = new SaveInfo
+                {
+                    ImgUri = imageUri,
+                    Path = directoryPath,
+                    FileName = fileName
+                };
+
+                _saveQueue.Enqueue(info);
             }
+
             catch (Exception ex)
             {
                 Logger.Error("Cell 데이터 변환 실패 " + ex.Message);
             }
-
-
 
         }
         #endregion

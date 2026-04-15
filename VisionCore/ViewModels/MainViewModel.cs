@@ -31,6 +31,8 @@ public class MainViewModel : ViewModelBase
 
     public ICommand OpenConfigCommand { get; }
 
+    private string _imgUri;
+
     public MainViewModel()
     {
         ConnectCommand = new RelayCommand(async o => await ExecuteConnect());
@@ -193,11 +195,14 @@ public class MainViewModel : ViewModelBase
     }
     private async void OnSensorResultsChanged(object sender, EventArgs e)
     {
-        string imageUri = controlModel.IsInSightSensor.GetMainImageUrl();
+        // 이미지가 변경되었을 경우에만 Trigger
+        if(_imgUri != controlModel.IsInSightSensor.GetMainImageUrl())
+        {
+            _imgUri = controlModel.IsInSightSensor.GetMainImageUrl();
 
-        _ = fileManagerModel.SaveCurrentSensorImage(imageUri);
+            await fileManagerModel.GetCellValueAsync(_imgUri);
+        }
 
-        // Log("이미지 저장 프로세스 시작...", LogLevel.Debug);
     }
 
 

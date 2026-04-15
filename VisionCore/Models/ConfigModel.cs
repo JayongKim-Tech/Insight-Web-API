@@ -50,6 +50,7 @@ namespace VisionCore.Models
             Port = ini.Read("Camera", "Port", "58640");
             User = ini.Read("Camera", "User", "admin");
             Password = ini.Read("Camera", "Password", "");
+
             CellModelName = ini.Read("Cell", "ModelName", "A0");
             CellPosition = ini.Read("Cell", "Position", "B0");
             CellResult = ini.Read("Cell", "Result", "B0");
