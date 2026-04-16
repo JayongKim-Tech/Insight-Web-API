@@ -169,11 +169,11 @@ namespace VisionCore.Models
                             using (Bitmap bitmap = new Bitmap(ms))
                             {
                                 bitmap.Save(item.Path, ImageFormat.Jpeg);
-                                bitmap.Dispose();
                             }
+
+                            Logger.Info("Image 저장 완료");
                         }
 
-                        Logger.Info("Image 저장 완료");
                     }
                     else
                     {
@@ -241,6 +241,8 @@ namespace VisionCore.Models
                 };
 
                 _saveQueue.Enqueue(info);
+
+
             }
 
             catch (Exception ex)

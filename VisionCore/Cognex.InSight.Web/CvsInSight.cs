@@ -6,8 +6,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Security.Policy;
 using System.Threading.Tasks;
 using System.Timers;
+using WebSocketSharp;
 
 namespace Cognex.InSight.Web
 {
@@ -1043,7 +1045,9 @@ namespace Cognex.InSight.Web
     public async Task LoadJob(string filename)
     {
       object[] args = { filename };
-      await _cogSocket.PostAsync(_sessionIDPath + _loadJobPath, args).ConfigureAwait(false);
+
+            string finalUrl = RemoteIPAddressUrl + _httpRequestRoot + _sessionIDPath + _loadImagePath;
+            await _cogSocket.PostAsync(_sessionIDPath + _loadJobPath, args).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1156,20 +1160,22 @@ namespace Cognex.InSight.Web
     /// <remarks>
     /// This method blocks until the image is loaded.
     /// </remarks>
-    public async void LoadImage(string filename)
-    {
-      byte[] bytes = File.ReadAllBytes(filename);
-      string url = RemoteIPAddressUrl + _httpRequestRoot + _sessionIDPath + _loadImagePath;
+        public async void LoadImage(string filename)
+        {
+            byte[] bytes = File.ReadAllBytes(filename);
+            string url = RemoteIPAddressUrl + _httpRequestRoot + _sessionIDPath + _loadImagePath;
 
-      TimeSpan timeout = TimeSpan.FromSeconds(30);
+            TimeSpan timeout = TimeSpan.FromSeconds(30);
 
-      using (var content = new ByteArrayContent(bytes))
-      {
-        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/bmp");
-        HttpResponseMessage msg = await _httpClient.PostAsync(url, content);
-        msg.EnsureSuccessStatusCode();
-      }
-    }
+            var content = new ByteArrayContent(bytes);
+            {
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/bmp");
+
+                HttpResponseMessage msg = await _httpClient.PostAsync(url, content);
+                msg.EnsureSuccessStatusCode();
+            }
+
+        }
 
     /// <summary>
     /// Requests cell results for the range of cells.
