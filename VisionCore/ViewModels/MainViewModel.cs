@@ -26,6 +26,7 @@ public class MainViewModel : ViewModelBase
 
     public LoggerService logger => LoggerService.Instance;
 
+    //test
 
     public ICommand ConnectCommand { get; }
     public ICommand CloseCommand { get; }
