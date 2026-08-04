@@ -65,26 +65,49 @@
 
             <Border Grid.Row="0" Background="#1E1E1E" BorderBrush="#121212" BorderThickness="0,0,0,1">
                 <Grid>
+                    <!-- 로고 영역 (기존 유지) -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
                         <Image Source="/Resources/FAPLUS_Logo.jpg"
-                       Height="42"
-                       Stretch="Uniform"
-                       VerticalAlignment="Center"
-                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                   Height="42"
+                   Stretch="Uniform"
+                   VerticalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
                     </StackPanel>
 
+                    <!-- 우측 장치 탐색 및 연결 제어 영역 -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
-                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColor}"
-                           FontSize="16" VerticalAlignment="Center" Margin="0,0,20,0" FontWeight="Bold"/>
 
-                        <Button Command="{Binding ConnectCommand}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Connect Sensor">
+                        <Button Command="{Binding ScanDevicesCommand}" 
+                            Style="{StaticResource SmallIconBtnStyle}" 
+                            ToolTip="Search Devices (Camera/Emulator)"> 
+                            <Image Source="/Resources/zoom-original.ico" Width="18" Opacity="0.9"/>
+                        </Button>
+
+                        <!-- [추가] 탐색된 장치 목록 선택 ComboBox -->
+                        <ComboBox ItemsSource="{Binding Devices}"
+                      SelectedItem="{Binding SelectedDevice}"
+                      Width="180" Height="28"
+                      Margin="4,0"
+                      VerticalAlignment="Center"
+                      VerticalContentAlignment="Center"
+                      Background="#2D2D2D"
+                      Foreground="Black"
+                      BorderBrush="#444444"
+                      DisplayMemberPath="DisplayName"
+                      ToolTip="Select Discovered Device"/>
+
+                        <Rectangle Width="1" Fill="#444444" Margin="8,15"/>
+
+                        <!-- 연결 버튼 (선택한 장치로 연결 실행) -->
+                        <Button Command="{Binding ConnectCommand}" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Connect Selected Sensor">
                             <Image Source="/Resources/Run_48.png" Width="22" Opacity="0.9"/>
                         </Button>
 
-                        <Rectangle Width="1" Fill="#444444" Margin="12,15"/>
+                        <Rectangle Width="1" Fill="#444444" Margin="8,15"/>
 
+                        <!-- 프로그램 종료 버튼 (기존 유지) -->
                         <Button Command="{Binding CloseCommand}" Style="{StaticResource SmallIconBtnStyle}"
-                        Background="#22C42B1C" ToolTip="Close Application">
+                    Background="#22C42B1C" ToolTip="Close Application">
                             <Image Source="/Resources/Close_48.png" Width="18"/>
                         </Button>
                     </StackPanel>

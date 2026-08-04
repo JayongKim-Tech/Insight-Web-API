@@ -38,6 +38,30 @@ public class MainViewModel : ViewModelBase
     public ICommand OpenConfigCommand { get; }
     public ICommand TriggerCommand { get; }
 
+    public ICommand ScanDevicesCommand { get; }
+
+    public ObservableCollection<DiscoveredDevice> Devices { get; set; } = new ObservableCollection<DiscoveredDevice>();
+
+    private DiscoveredDevice _selectedDevice;
+    public DiscoveredDevice SelectedDevice
+    {
+        get => _selectedDevice;
+        set
+        {
+            if (_selectedDevice != value)
+            {
+                _selectedDevice = value;
+                OnPropertyChanged();
+
+                if (_selectedDevice != null)
+                {
+                    Settings.IP = _selectedDevice.IpAddress;
+                    Settings.Port = _selectedDevice.Port.ToString();
+                }
+            }
+        }
+    }
+
     private string _imgUri;
     private string selectedPath;
 
@@ -75,9 +99,32 @@ public class MainViewModel : ViewModelBase
 
         TriggerCommand = new RelayCommand(o => ExcuteTrigger());
 
+        ScanDevicesCommand = new RelayCommand(async o => await ScanDevices());
 
     }
 
+    private async Task ScanDevices()
+    {
+        Devices.Clear();
+
+        var discoveredDevices = await CameraControlModel.Instance.ScanDevicesAsync();
+
+        foreach (var device in discoveredDevices)
+        {
+            Devices.Add(device);
+        }
+
+        if (Devices.Count > 0)
+        {
+            SelectedDevice = Devices[0];
+            Logger.Info($"{Devices.Count}개의 장치를 찾았습니다.");
+        }
+        else
+        {
+            Logger.Info("No Devices");
+        }
+
+    }
     private async Task ExecuteConnect()
     {
         try

@@ -109,8 +109,6 @@ namespace VisionCore.Models
                             });
                         }
                     }
-
-
                 }
             }
             catch (Exception ex)
