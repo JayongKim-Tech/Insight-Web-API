@@ -51,7 +51,6 @@ namespace VisionCore.Views
                 {
                     string filePath = files[0]; // 첫 번째 파일 경로
 
-                    // 확장자가 .jobx 인지 체크 (선택 사항)
                     if (string.Equals(System.IO.Path.GetExtension(filePath), ".jobx", StringComparison.OrdinalIgnoreCase))
                     {
                         await controlModel.IsInSightSensor.LoadJob(filePath);

@@ -39,7 +39,7 @@ namespace VisionCore.Models
         public CvsDisplay CvsDisplay { get; } = new CvsDisplay();
 
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(500) };
-        private const int DefaultCameraPort = 51150;
+        private const int DefaultCameraPort = 80;
 
         private CameraControlModel() { }
 

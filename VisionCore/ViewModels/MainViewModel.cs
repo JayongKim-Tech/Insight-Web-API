@@ -142,9 +142,6 @@ public class MainViewModel : ViewModelBase
                 //연결 성공시 카메라 Event 등록
                 controlModel.IsInSightSensor.ResultsChanged += OnSensorResultsChanged;
 
-                // Cam Online/Offline 변경시 Event 등록
-                controlModel.IsInSightSensor.StateChanged += OnSenorOnlineChanged;
-
                 OnPropertyChanged(nameof(controlModel.IsInSightSensor));
 
                 Logger.Success($"센서 연결 성공!");
@@ -167,7 +164,6 @@ public class MainViewModel : ViewModelBase
 
             //메모리 리크 방지
             controlModel.IsInSightSensor.ResultsChanged -= OnSensorResultsChanged;
-            controlModel.IsInSightSensor.StateChanged -= OnSenorOnlineChanged;
 
             await controlModel.DisconnectAsync(controlModel.IsInSightSensor);
             Logger.Info("센서 연결 해제 완료.");
@@ -181,6 +177,8 @@ public class MainViewModel : ViewModelBase
         get => _isOnline;
         set
         {
+            if (_isOnline == value) return;
+
             _isOnline = value;
 
             OnPropertyChanged(nameof(IsOnline));
@@ -195,7 +193,6 @@ public class MainViewModel : ViewModelBase
         {
             Logger.Warning("연결된 센서가 없어 상태를 변경할 수 없습니다.");
 
-
             _isOnline = !targetValue;
             OnPropertyChanged(nameof(IsOnline));
             return;
@@ -205,10 +202,10 @@ public class MainViewModel : ViewModelBase
         {
             await controlModel.IsInSightSensor.SetSoftOnlineAsync(targetValue);
 
-            //if (targetValue)
-            //    Logger.Success("센서 상태: [ONLINE]");
-            //else
-            //    Logger.Info("센서 상태: [OFFLINE]");
+            if (targetValue)
+                Logger.Success("센서 상태: [ONLINE]");
+            else
+                Logger.Info("센서 상태: [OFFLINE]");
 
         }
         catch (Exception ex)
@@ -216,7 +213,6 @@ public class MainViewModel : ViewModelBase
             Logger.Error($"상태 변경 오류: {ex.ToString()}");
 
             _isOnline = !targetValue;
-
             OnPropertyChanged(nameof(IsOnline));
         }
     }
@@ -445,14 +441,5 @@ public class MainViewModel : ViewModelBase
 
 
     }
-
-    private void OnSenorOnlineChanged(object sender, EventArgs e)
-    {
-        if(controlModel.IsInSightSensor.Connected)
-        {
-            IsOnline = controlModel.IsInSightSensor.Online;
-        }
-    }
-
 
 }

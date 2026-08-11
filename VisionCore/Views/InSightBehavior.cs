@@ -7,11 +7,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms.Integration;
+using VisionCore.Models;
 
 namespace VisionCore.Views
 {
     public static class InSightBehavior
     {
+        public static CameraControlModel controlModel => CameraControlModel.Instance;
         public static CvsInSight GetSensorSource(DependencyObject obj) => (CvsInSight)obj.GetValue(SensorSourceProperty);
         public static void SetSensorSource(DependencyObject obj, CvsInSight value) => obj.SetValue(SensorSourceProperty, value);
 
@@ -22,19 +24,18 @@ namespace VisionCore.Views
         {
             if (d is WindowsFormsHost host)
             {
-                var sensor = e.NewValue as CvsInSight;
-                if (host.Child is CvsDisplay display)
+                var sensor = controlModel.IsInSightSensor;
+
+                if(host.Child is CvsDisplay display)
                 {
 
                     display.SetInSight(sensor);
 
                     if (sensor != null)
                     {
-
                         sensor.ResultsChanged += async (s, ev) =>
                         {
                             display.InitDisplay();
-
                             await display.OnConnected();
                         };
 
@@ -46,7 +47,7 @@ namespace VisionCore.Views
                         }
                     }
                 }
-
+                
                 else if (host.Child is CvsSpreadsheet spreadsheet)
                 {
                     spreadsheet.SetInSight(sensor);

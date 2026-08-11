@@ -274,5 +274,47 @@ namespace Cognex.InSight.Web.Controls
                 picBox.Invalidate();
             }
         }
+
+        public void LoadLocalImage(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            {
+                Debug.WriteLine("[오류] 파일 경로가 올바르지 않거나 존재하지 않습니다.");
+                return;
+            }
+
+            if (picBox.InvokeRequired)
+            {
+                picBox.Invoke(new Action(() => LoadLocalImage(filePath)));
+                return;
+            }
+
+            try
+            {
+                // 1. 파일 잠금(Lock) 방지를 위해 MemoryStream을 사용하여 비트맵을 로드합니다.
+                byte[] imageBytes = File.ReadAllBytes(filePath);
+                using (MemoryStream ms = new MemoryStream(imageBytes))
+                {
+                    using (Bitmap tempImg = new Bitmap(ms))
+                    {
+                        Bitmap newImg = new Bitmap(tempImg);
+
+                        // 2. 기존 picBox에 할당된 이전 이미지 메모리를 안전하게 해제합니다.
+                        var oldImg = picBox.Image;
+                        picBox.Image = newImg;
+                        oldImg?.Dispose();
+                    }
+                }
+
+                // 3. picBox 화면을 즉시 다시 그리도록 강제 발동합니다.
+                picBox.Invalidate();
+                Debug.WriteLine($"[성공] 로컬 이미지 디스플레이 완료: {filePath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[예외 발생] LoadLocalImage: {ex.Message}");
+            }
+        }
     }
 }
+    
