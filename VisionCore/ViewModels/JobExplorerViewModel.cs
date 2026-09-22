@@ -13,7 +13,7 @@ namespace VisionCore.ViewModels
     {
         public ObservableCollection<FileItem> Files { get; } = new ObservableCollection<FileItem>();
         public FileManagerModel fileManager => FileManagerModel.Instance;
-        public CameraControlModel CameraControl => CameraControlModel.Instance;
+        private readonly CameraControlModel CameraControl = new CameraControlModel();
 
 
         private FileItem _selectedFile;

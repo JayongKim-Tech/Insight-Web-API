@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -23,7 +24,6 @@ namespace VisionCore.Views
     public partial class MainWindow : Window
     {
         public LoggerService logger => LoggerService.Instance;
-        public CameraControlModel controlModel => CameraControlModel.Instance;
 
         public MainWindow()
         {
@@ -31,36 +31,53 @@ namespace VisionCore.Views
             this.DataContext = new MainViewModel();
         }
 
-        private void Display_PreviewDragOver(object sender, DragEventArgs e)
+        // 타일 헤더를 드래그하면 이동
+        private void TileHeader_DragDelta(object sender, DragDeltaEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (sender is FrameworkElement fe && fe.DataContext is SensorSessionViewModel vm)
             {
-                e.Effects = DragDropEffects.Copy;
-                e.Handled = true;
+                vm.X = Math.Max(0, vm.X + e.HorizontalChange);
+                vm.Y = Math.Max(0, vm.Y + e.VerticalChange);
             }
         }
 
-        private async void Display_Drop(object sender, DragEventArgs e)
+        // 타일 모서리 그립을 드래그하면 크기 조절
+        private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (sender is FrameworkElement fe && fe.DataContext is SensorSessionViewModel vm)
             {
+                vm.Width = Math.Max(280, vm.Width + e.HorizontalChange);
+                vm.Height = Math.Max(220, vm.Height + e.VerticalChange);
+            }
+        }
 
-                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+        // 타일을 대시보드 전체 크기로 전체화면 토글
+        private void MaximizeTile_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is FrameworkElement fe) || !(fe.DataContext is SensorSessionViewModel vm)) return;
 
-                if (files != null && files.Length > 0)
-                {
-                    string filePath = files[0]; // 첫 번째 파일 경로
+            if (!vm.IsMaximized)
+            {
+                vm.PrevX = vm.X;
+                vm.PrevY = vm.Y;
+                vm.PrevWidth = vm.Width;
+                vm.PrevHeight = vm.Height;
 
-                    if (string.Equals(System.IO.Path.GetExtension(filePath), ".jobx", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await controlModel.IsInSightSensor.LoadJob(filePath);
-                        logger.Info($"Job파일 Load: {filePath}");
-                    }
-                    else
-                    {
-                        System.Windows.MessageBox.Show(".jobx 확장자 확인 필요..");
-                    }
-                }
+                vm.X = 0;
+                vm.Y = 0;
+                vm.Width = Math.Max(SensorScrollViewer.ActualWidth, 400);
+                vm.Height = Math.Max(SensorScrollViewer.ActualHeight, 300);
+                vm.ZIndex = 100;
+                vm.IsMaximized = true;
+            }
+            else
+            {
+                vm.X = vm.PrevX;
+                vm.Y = vm.PrevY;
+                vm.Width = vm.PrevWidth;
+                vm.Height = vm.PrevHeight;
+                vm.ZIndex = 0;
+                vm.IsMaximized = false;
             }
         }
     }

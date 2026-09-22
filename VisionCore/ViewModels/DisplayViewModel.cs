@@ -11,7 +11,6 @@ namespace VisionCore.ViewModels
 {
     public class DisplayViewModel : ViewModelBase
     {
-        public CameraControlModel CameraControl => CameraControlModel.Instance;
         private bool _isGridVisible = false;
 
         public bool IsGridVisible
@@ -23,6 +22,7 @@ namespace VisionCore.ViewModels
 
                 _isGridVisible = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsVideoVisible));
 
                 if (_isGridVisible)
                 {
@@ -34,6 +34,9 @@ namespace VisionCore.ViewModels
                 }
             }
         }
+
+        // Grid 모드일 때는 영상 대신 그리드가 타일 전체를 차지함 (오버레이가 아니라 화면 전환)
+        public bool IsVideoVisible => !IsGridVisible;
 
         private bool _isGraphicVisible = true;
         public bool IsGraphicVisible

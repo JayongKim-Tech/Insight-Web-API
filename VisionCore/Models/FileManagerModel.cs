@@ -1,15 +1,9 @@
-﻿using Cognex.InSight.Web;
+using Cognex.InSight.Web;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace VisionCore.Models
@@ -26,29 +20,11 @@ namespace VisionCore.Models
 
     public class FileManagerModel
     {
-
-        public class SaveInfo
-        {
-            public string ImgUri { get; set; }
-            public string Path { get; set; }
-        }
-
-        // queue 생성
-        private ConcurrentQueue<SaveInfo> _saveQueue = new ConcurrentQueue<SaveInfo>();
-
         private static FileManagerModel _instance;
         public static FileManagerModel Instance => _instance ?? (_instance = new FileManagerModel());
-        public CameraControlModel controlModel => CameraControlModel.Instance;
         public ConfigModel configModel => ConfigModel.Instance;
 
-        private static readonly HttpClient _httpClient = new HttpClient();
-        private FileManagerModel()
-        {
-            Thread thread = new Thread(new ThreadStart(SaveCurrentSensorImage));
-            thread.IsBackground = true;
-            thread.Start();
-
-        }
+        private FileManagerModel() { }
 
         #region 파일 List 불러오기 창
         public List<FileItem> GetPcFileList(string folderPath)
@@ -140,114 +116,53 @@ namespace VisionCore.Models
 
         #endregion
 
-        #region 결과 이미지 저장
-        public async void SaveCurrentSensorImage()
-        {
-
-            while (true)
-            {
-                try
-                {
-                    //선입선출
-                    if (_saveQueue.TryDequeue(out var item))
-                    {
-
-                        string PullPath = Path.GetDirectoryName(item.Path);
-
-                        if (!Directory.Exists(PullPath))
-                        {
-                            Directory.CreateDirectory(PullPath);
-                        }
-
-
-                        byte[] bytes = await _httpClient.GetByteArrayAsync(item.ImgUri);
-
-                        using (MemoryStream ms = new MemoryStream(bytes))
-                        {
-                            using (Bitmap bitmap = new Bitmap(ms))
-                            {
-                                bitmap.Save(item.Path, ImageFormat.Jpeg);
-                            }
-
-                            Logger.Info("Image 저장 완료");
-                        }
-
-                    }
-                    else
-                    {
-                        //과부하 방지..
-                        await Task.Delay(100);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error(ex.Message);
-                    await Task.Delay(1000);
-                }
-            }
-        }
-
-        #endregion
-
-
         #region Json 데이터 전처리
 
-
-        public async Task GetCellValueAsync(string imageUri)
+        /// <summary>
+        /// Result/PointNumber 셀과 사용자 정의 필드를 읽어 현재 트리거가 어느 Point의 결과인지 판단합니다.
+        /// (셀 위치는 항상 동일하며, PLC가 CellPointNumber 셀에 현재 Point 번호를 씁니다.)
+        /// </summary>
+        public InspectionResultItem BuildPointResult(CvsInSight sensor, string sensorName)
         {
-            //Result값 업데이트
-            await controlModel.IsInSightSensor.GetLatestResult();
-
             try
             {
-                JToken results = controlModel.IsInSightSensor.Results;
-
+                JToken results = sensor.Results;
                 var cellList = results["cells"] as JArray;
 
-                // 현재 모델
-                string model = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellModelName)?["data"]?.ToString() ?? "DefaultModel";
+                // location -> data 한 번에 인덱싱 (셀마다 개별 FirstOrDefault로 전체 배열을 훑지 않도록)
+                var cellMap = cellList
+                    .Where(c => c["location"] != null)
+                    .GroupBy(c => c["location"].ToString())
+                    .ToDictionary(g => g.Key, g => g.First()["data"]?.ToString());
 
-                // 현재 포지션
-                string position = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellPosition)?["data"]?.ToString() ?? "0";
+                string result = cellMap.TryGetValue(configModel.CellResult, out var r) ? r : "NG";
+                string pointNumber = cellMap.TryGetValue(configModel.CellPointNumber, out var pn) ? pn : "1";
 
-                // 현재 판정 결과
-                string result = cellList.FirstOrDefault(c => c["location"]?.ToString() == configModel.CellResult)?["data"]?.ToString() ?? "NG";
-
-                // 실행파일 경로
-                string exePath = AppDomain.CurrentDomain.BaseDirectory;
-
-                // 년도
-                string year = DateTime.Now.ToString("yyyy");
-
-                // 월
-                string month = DateTime.Now.ToString("MM");
-
-                // 일
-                string day = DateTime.Now.ToString("dd");
-
-                // 파일명
-                string fileName = $"{DateTime.Now:HH-mm-ss-fff}.jpg";
-
-                // 저장 경로 조합
-                string directoryPath = Path.Combine(exePath, "VisionImage", year, month, day, model, position, result, fileName);
-
-
-                var info = new SaveInfo
+                var item = new InspectionResultItem
                 {
-                    ImgUri = imageUri,
-                    Path = directoryPath,
+                    Timestamp = DateTime.Now,
+                    SensorName = sensorName,
+                    PointName = $"Point{pointNumber}",
+                    Result = result,
+                    IsOk = string.Equals(result, "OK", StringComparison.OrdinalIgnoreCase)
                 };
 
-                _saveQueue.Enqueue(info);
+                foreach (var field in configModel.CustomFields)
+                {
+                    item.CustomValues.Add(new CustomFieldValue
+                    {
+                        Name = field.Name,
+                        Value = cellMap.TryGetValue(field.CellLocation, out var v) ? v : ""
+                    });
+                }
 
-
+                return item;
             }
-
             catch (Exception ex)
             {
                 Logger.Error("Cell 데이터 변환 실패 " + ex.Message);
+                return null;
             }
-
         }
         #endregion
     }

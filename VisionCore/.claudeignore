@@ -1,0 +1,30 @@
+# [필수] 빌드 및 컴파일 자동 생성물 (토큰 낭비 주범)
+bin/
+obj/
+*.g.cs
+*.g.i.cs
+*.baml
+*.pdb
+*.dll
+*.exe
+
+# [IDE 및 캐시 설정]
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# [정적 미디어 리소스] (코드 분석에 불필요)
+*.png
+*.jpg
+*.jpeg
+*.ico
+*.svg
+*.mp4
+*.wav
+
+# [패키지]
+packages/
+TestResults/

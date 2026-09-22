@@ -31,17 +31,13 @@ namespace VisionCore.Models
     /// </summary>
     public class CameraControlModel
     {
-        private static CameraControlModel _instance;
-        public static CameraControlModel Instance => _instance ?? (_instance = new CameraControlModel());
-
-        // Cognex Web API SDK 객체
+        // Cognex Web API SDK 객체 (센서 1개 = 인스턴스 1개)
         public CvsInSight IsInSightSensor { get; } = new CvsInSight();
-        public CvsDisplay CvsDisplay { get; } = new CvsDisplay();
 
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(500) };
         private const int DefaultCameraPort = 80;
 
-        private CameraControlModel() { }
+        public CameraControlModel() { }
 
         #region 카메라 연결 / 해제
 
@@ -92,7 +88,7 @@ namespace VisionCore.Models
         /// <summary>
         /// 실행 중인 로컬 에뮬레이터 및 네트워크 내 실제 카메라 목록을 통합 반환합니다.
         /// </summary>
-        public async Task<List<DiscoveredDevice>> ScanDevicesAsync()
+        public static async Task<List<DiscoveredDevice>> ScanDevicesAsync()
         {
             var deviceList = new List<DiscoveredDevice>();
 
@@ -110,7 +106,7 @@ namespace VisionCore.Models
             return deviceList;
         }
 
-        private async Task<DiscoveredDevice> ScanLocalEmulatorAsync()
+        private static async Task<DiscoveredDevice> ScanLocalEmulatorAsync()
         {
             string[] targetProcessPrefixes = new string[]
             {
@@ -147,7 +143,7 @@ namespace VisionCore.Models
             return null;
         }
 
-        private async Task<List<DiscoveredDevice>> ScanNetworkCamerasAsync()
+        private static async Task<List<DiscoveredDevice>> ScanNetworkCamerasAsync()
         {
             string subnet = GetLocalSubnet();
             if (string.IsNullOrEmpty(subnet)) return new List<DiscoveredDevice>();
@@ -163,7 +159,7 @@ namespace VisionCore.Models
             return results.Where(d => d != null).ToList();
         }
 
-        private async Task<DiscoveredDevice> CheckCameraAsync(string ip, int port)
+        private static async Task<DiscoveredDevice> CheckCameraAsync(string ip, int port)
         {
             if (await IsValidHmiPortAsync(ip, port))
             {
@@ -178,7 +174,7 @@ namespace VisionCore.Models
             return null;
         }
 
-        private async Task<bool> IsValidHmiPortAsync(string ip, int port)
+        private static async Task<bool> IsValidHmiPortAsync(string ip, int port)
         {
             try
             {
@@ -191,7 +187,7 @@ namespace VisionCore.Models
             }
         }
 
-        private List<int> GetPortsByPid(int pid)
+        private static List<int> GetPortsByPid(int pid)
         {
             var ports = new List<int>();
             using (Process p = new Process())
@@ -220,7 +216,7 @@ namespace VisionCore.Models
             return ports.Distinct().ToList();
         }
 
-        private string GetLocalSubnet()
+        private static string GetLocalSubnet()
         {
             var host = Dns.GetHostEntry(Dns.GetHostName());
             var ip = host.AddressList.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
