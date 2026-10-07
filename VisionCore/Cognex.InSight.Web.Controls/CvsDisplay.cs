@@ -87,7 +87,8 @@ namespace Cognex.InSight.Web.Controls
                     imageHeight = viewPort.Height;
                 }
 
-                string url = _inSight.GetMainImageUrl(viewPort.Width, viewPort.Height);
+                // 접속 직후/잡 미로드 상태에서는 ViewPort가 null일 수 있음 -> 원본 크기(-1)로 요청 (async void라 예외 시 앱 종료됨)
+                string url = _inSight?.GetMainImageUrl(imageWidth > 0 ? imageWidth : -1, imageHeight > 0 ? imageHeight : -1);
                 if (string.IsNullOrEmpty(url)) return;
 
                 try

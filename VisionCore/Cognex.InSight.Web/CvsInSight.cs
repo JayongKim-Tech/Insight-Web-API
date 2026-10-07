@@ -1160,21 +1160,28 @@ namespace Cognex.InSight.Web
     /// <remarks>
     /// This method blocks until the image is loaded.
     /// </remarks>
-        public async void LoadImage(string filename)
+        public Task LoadImage(string filename)
         {
-            byte[] bytes = File.ReadAllBytes(filename);
+            return LoadImage(File.ReadAllBytes(filename));
+        }
+
+        /// <summary>
+        /// BMP 데이터를 센서의 현재 이미지로 올려 잡을 다시 실행 (오프라인 재검사용)
+        /// async void 였던 것을 Task로 변경 - 실패 시 호출 측에서 예외 처리 가능 (async void는 예외 시 앱 종료)
+        /// </summary>
+        public async Task LoadImage(byte[] bmpBytes)
+        {
             string url = RemoteIPAddressUrl + _httpRequestRoot + _sessionIDPath + _loadImagePath;
 
-            TimeSpan timeout = TimeSpan.FromSeconds(30);
-
-            var content = new ByteArrayContent(bytes);
+            using (var content = new ByteArrayContent(bmpBytes))
             {
                 content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/bmp");
 
-                HttpResponseMessage msg = await _httpClient.PostAsync(url, content);
-                msg.EnsureSuccessStatusCode();
+                using (HttpResponseMessage msg = await _httpClient.PostAsync(url, content))
+                {
+                    msg.EnsureSuccessStatusCode();
+                }
             }
-
         }
 
     /// <summary>

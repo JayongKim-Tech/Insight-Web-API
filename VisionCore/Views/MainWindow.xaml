@@ -5,8 +5,14 @@
         xmlns:cognex_controls="clr-namespace:Cognex.InSight.Web.Controls;assembly=Cognex.InSight.Web.Controls"
         xmlns:behaviors="clr-namespace:VisionCore.Views"
         xmlns:vm="clr-namespace:VisionCore.ViewModels"
-        Title="FAPLUS Vision Professional" Height="900" Width="1400"
-        Background="#F5F5F5" WindowStyle="None" WindowState="Maximized">
+        Title="FAPLUS Vision Professional" Height="900" Width="1400" MinWidth="1000" MinHeight="600"
+        WindowStartupLocation="CenterScreen" StateChanged="Window_StateChanged"
+        Background="#1E1E1E" WindowState="Maximized">
+
+    <!-- 기본 제목 표시줄 대신 상단 헤더(55px)를 제목 표시줄로 사용: 드래그 이동 / 더블클릭 최대화 / 가장자리 크기 조절 / 화면 가장자리 스냅 -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="55" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -89,78 +95,15 @@
             <Setter Property="Width" Value="16"/>
         </Style>
 
-        <!-- Point 결과 카드 (썸네일 클릭 시 그 센서 디스플레이에 미리보기) -->
-        <DataTemplate x:Key="PointResultCardTemplate">
-            <Button Width="84" Margin="4" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                    Command="{Binding DataContext.PreviewImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                    CommandParameter="{Binding}">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <ContentPresenter/>
-                    </ControlTemplate>
-                </Button.Template>
-                <StackPanel>
-                    <Border Width="78" Height="52" CornerRadius="3" BorderThickness="2" Background="#000000">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="BorderBrush" Value="#444444"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsOk}" Value="True">
-                                        <Setter Property="BorderBrush" Value="LimeGreen"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsOk}" Value="False">
-                                        <Setter Property="BorderBrush" Value="IndianRed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
-                    </Border>
-                    <TextBlock Text="{Binding PointName}" Foreground="#AAAAAA" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-                    <Border CornerRadius="8" Margin="0,2,0,0" Padding="8,1" HorizontalAlignment="Center">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="#3A3A3A"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsOk}" Value="True">
-                                        <Setter Property="Background" Value="#1B5E20"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsOk}" Value="False">
-                                        <Setter Property="Background" Value="#B71C1C"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock FontSize="10" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="대기"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsOk}" Value="True">
-                                            <Setter Property="Text" Value="OK"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding IsOk}" Value="False">
-                                            <Setter Property="Text" Value="NG"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Border>
-                </StackPanel>
-            </Button>
-        </DataTemplate>
-
         <!-- 센서 1개(타일 1개) 템플릿: 자유 배치(드래그 이동/모서리 리사이즈) -->
         <DataTemplate DataType="{x:Type vm:SensorSessionViewModel}">
             <Grid Background="Black">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="34"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="96"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Grid.RowSpan="3" BorderBrush="#333333" BorderThickness="1"/>
+                <Border Grid.Row="0" Grid.RowSpan="2" BorderBrush="#333333" BorderThickness="1"/>
 
                 <!-- 타일 헤더 (배경 전체가 드래그 핸들, 버튼은 그 위에 올라와 클릭이 우선됨) -->
                 <Grid Grid.Row="0">
@@ -175,6 +118,12 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0">
                         <Image Style="{StaticResource TileOnlineStatusImageStyle}" Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding DisplayName}" Foreground="#DCDCDC" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <!-- 스프레드시트(편집기) 연결 중 표시: 이 동안 센서가 ONLINE/OFFLINE 변경을 막음 -->
+                        <Border Margin="8,0,0,0" Padding="6,1" CornerRadius="3" Background="#3A3218" BorderBrush="#8A6D2B" BorderThickness="1"
+                                VerticalAlignment="Center" ToolTip="In-Sight 스프레드시트(편집기)가 이 센서에 연결돼 있어 ONLINE/OFFLINE 변경이 막혀 있습니다."
+                                Visibility="{Binding IsEditorAttached, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="편집기 연결됨" Foreground="#F0C674" FontSize="10"/>
+                        </Border>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -253,21 +202,8 @@
                     </wfi:WindowsFormsHost>
                 </Grid>
 
-                <!-- Point별 최신 결과 + 이미지 (센서별로 구분되어 이 타일에 종속) -->
-                <Border Grid.Row="2" Background="#121212" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding Results}" ItemTemplate="{StaticResource PointResultCardTemplate}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Border>
-
                 <!-- 리사이즈 그립 -->
-                <Thumb Grid.Row="0" Grid.RowSpan="3" Width="16" Height="16" Margin="0,0,1,1"
+                <Thumb Grid.Row="0" Grid.RowSpan="2" Width="16" Height="16" Margin="0,0,1,1"
                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
                        Cursor="SizeNWSE" DragDelta="ResizeThumb_DragDelta">
                     <Thumb.Template>
@@ -280,13 +216,12 @@
         </DataTemplate>
     </Window.Resources>
 
-    <DockPanel>
+    <DockPanel x:Name="RootPanel">
         <Grid x:Name="tLayout_Main">
             <Grid.RowDefinitions>
                 <RowDefinition Height="55"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="5"/>
-                <RowDefinition Height="180" MinHeight="30"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0" Background="#1E1E1E" BorderBrush="#121212" BorderThickness="0,0,0,1">
@@ -300,8 +235,43 @@
                    RenderOptions.BitmapScalingMode="HighQuality"/>
                     </StackPanel>
 
-                    <!-- 우측 장치 탐색 및 연결 제어 영역 -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <!-- 우측 장치 탐색 및 연결 제어 영역 (제목 표시줄 영역 안에서도 클릭 가능하도록 지정) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"
+                                WindowChrome.IsHitTestVisibleInChrome="True">
+
+                        <!-- 이미지 저장 드라이브 사용량 (1분마다 갱신, 기준 % 초과 시 오래된 이미지 자동 삭제) -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0"
+                                    DataContext="{Binding Disk}" ToolTip="{Binding ToolTipText}" Background="Transparent">
+                            <TextBlock Text="{Binding DriveName}" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ProgressBar Width="90" Height="6" Minimum="0" Maximum="100" Value="{Binding UsedPercent, Mode=OneWay}" VerticalAlignment="Center">
+                                <ProgressBar.Template>
+                                    <ControlTemplate TargetType="ProgressBar">
+                                        <Border CornerRadius="3" Background="#333333">
+                                            <Grid>
+                                                <Border x:Name="PART_Track"/>
+                                                <Border x:Name="PART_Indicator" CornerRadius="3" HorizontalAlignment="Left" Background="{TemplateBinding Foreground}"/>
+                                            </Grid>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ProgressBar.Template>
+                                <ProgressBar.Style>
+                                    <Style TargetType="ProgressBar">
+                                        <Setter Property="Foreground" Value="#4CC25A"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Level}" Value="1">
+                                                <Setter Property="Foreground" Value="#E5A50A"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Level}" Value="2">
+                                                <Setter Property="Foreground" Value="#FF5A5A"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ProgressBar.Style>
+                            </ProgressBar>
+                            <TextBlock Text="{Binding UsageText}" Foreground="#AAAAAA" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </StackPanel>
+
+                        <Rectangle Width="1" Fill="#444444" Margin="0,15,8,15"/>
 
                         <Button Command="{Binding ScanDevicesCommand}"
                             Style="{StaticResource SmallIconBtnStyle}"
@@ -346,6 +316,27 @@
 
                         <Rectangle Width="1" Fill="#444444" Margin="8,15"/>
 
+                        <!-- 최소화 버튼 (프로그램은 계속 실행, 작업 표시줄에서 복원) -->
+                        <Button Click="MinimizeWindow_Click" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Minimize">
+                            <Path Data="M0,0 L12,0" Stroke="#CCCCCC" StrokeThickness="1.6" Width="12" Height="2" VerticalAlignment="Center"/>
+                        </Button>
+
+                        <!-- 최대화 / 창 모드 전환 -->
+                        <Button Click="MaximizeWindow_Click" Style="{StaticResource SmallIconBtnStyle}" ToolTip="Maximize / Restore">
+                            <Path Stroke="#CCCCCC" StrokeThickness="1.3" Fill="Transparent" Width="12" Height="12">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Data" Value="M0.5,0.5 L11.5,0.5 L11.5,11.5 L0.5,11.5 Z"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                                <Setter Property="Data" Value="M3.5,0.5 L11.5,0.5 L11.5,8.5 M0.5,3.5 L8.5,3.5 L8.5,11.5 L0.5,11.5 Z"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+                        </Button>
+
                         <!-- 프로그램 종료 버튼 (기존 유지) -->
                         <Button Command="{Binding CloseCommand}" Style="{StaticResource SmallIconBtnStyle}"
                     Background="#22C42B1C" ToolTip="Close Application">
@@ -355,8 +346,16 @@
                 </Grid>
             </Border>
 
+            <!-- 본문: 왼쪽 센서 타일 대시보드 / 오른쪽 결과 리스트 -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="300"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="560" MinWidth="320"/>
+                </Grid.ColumnDefinitions>
+
             <!-- 센서 타일 대시보드: 자유 배치(드래그 이동/리사이즈), 넘치면 스크롤 -->
-            <ScrollViewer x:Name="SensorScrollViewer" Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#0A0A0A">
+            <ScrollViewer x:Name="SensorScrollViewer" Grid.Column="0" SizeChanged="SensorScrollViewer_SizeChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#0A0A0A">
                 <ItemsControl ItemsSource="{Binding Sensors}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -375,21 +374,318 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <GridSplitter Grid.Row="2" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                   Background="#333333" ShowsPreview="True" ResizeBehavior="PreviousAndNext"/>
 
-            <!-- 하단 로그 패널 -->
-            <Border Grid.Row="3" Background="#1E1E1E" BorderBrush="#121212" BorderThickness="0,1,0,0">
+                    <!-- 결과 리스트 (날짜별 CSV, 오늘은 실시간 추가) -->
+                    <Grid Grid.Column="2" DataContext="{Binding ResultHistory}" Background="#121212">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="25"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.Resources>
+                            <Style TargetType="TextBlock" x:Key="ToolbarLabel">
+                                <Setter Property="Foreground" Value="#888888"/>
+                                <Setter Property="FontSize" Value="11"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Margin" Value="10,0,4,0"/>
+                            </Style>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#252525"/>
+                                <Setter Property="Foreground" Value="#AAAAAA"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontSize" Value="11"/>
+                                <Setter Property="Padding" Value="8,5"/>
+                                <Setter Property="BorderBrush" Value="#333333"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="8,0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="DataGridCell">
+                                            <Border Padding="{TemplateBinding Padding}" Background="Transparent">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Grid.Resources>
+
+                        <!-- 제목 + 집계 -->
+                        <DockPanel Grid.Row="0" Background="#252525">
+                            <TextBlock DockPanel.Dock="Left" Text="RESULTS" Foreground="#888888" FontSize="11" FontWeight="Bold" Margin="10,0" VerticalAlignment="Center"/>
+                            <TextBlock DockPanel.Dock="Right" Foreground="#AAAAAA" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0">
+                                <Run Text="총"/> <Run Text="{Binding TotalCount, Mode=OneWay, StringFormat=N0}" FontWeight="Bold" Foreground="#DCDCDC"/>
+                                <Run Text="   OK"/> <Run Text="{Binding OkCount, Mode=OneWay, StringFormat=N0}" FontWeight="Bold" Foreground="#4CC25A"/>
+                                <Run Text="   NG"/> <Run Text="{Binding NgCount, Mode=OneWay, StringFormat=N0}" FontWeight="Bold" Foreground="#FF5A5A"/>
+                                <Run Text="{Binding NgRateText, Mode=OneWay, StringFormat=' ({0})'}" Foreground="#FF5A5A"/>
+                            </TextBlock>
+                        </DockPanel>
+
+                        <!-- 툴바: 1줄 날짜 / 2줄 필터 -->
+                        <StackPanel Grid.Row="1" Background="#1A1A1A">
+                            <DockPanel Height="34">
+                                <Button DockPanel.Dock="Right" Content="✕ 헤더 필터 해제" Command="{Binding ClearAllColumnFiltersCommand}" Height="24" Padding="8,0" Margin="0,0,4,0"
+                                        Background="#1F4E79" Foreground="#DCDCDC" BorderBrush="#4FA3E3" Cursor="Hand"
+                                        Visibility="{Binding HasColumnFilters, Converter={StaticResource BoolToVis}}"/>
+                                <Button DockPanel.Dock="Right" Command="{Binding OpenCsvFolderCommand}" Style="{StaticResource SmallIconBtnStyle}" Width="26" Height="26" ToolTip="CSV 파일 위치 열기">
+                                    <TextBlock Text="📁" FontSize="14" Foreground="#DCDCDC"/>
+                                </Button>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="날짜" Style="{StaticResource ToolbarLabel}"/>
+                                    <DatePicker SelectedDate="{Binding SelectedDate}" Width="120" Height="26" VerticalContentAlignment="Center"/>
+                                    <Button Content="오늘" Command="{Binding TodayCommand}" Width="44" Height="26" Margin="4,0,0,0"
+                                            Background="#2D2D2D" Foreground="#DCDCDC" BorderBrush="#444444" Cursor="Hand"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <DockPanel Height="34">
+                                <TextBlock DockPanel.Dock="Left" Text="센서" Style="{StaticResource ToolbarLabel}"/>
+                                <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding SensorFilters}" SelectedItem="{Binding SelectedSensor}" Width="150" Height="26" VerticalContentAlignment="Center"/>
+                                <TextBlock DockPanel.Dock="Left" Text="결과" Style="{StaticResource ToolbarLabel}"/>
+                                <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding ResultFilters}" SelectedItem="{Binding SelectedResult}" Width="64" Height="26" VerticalContentAlignment="Center"/>
+                                <TextBlock DockPanel.Dock="Left" Text="검색" Style="{StaticResource ToolbarLabel}"/>
+                                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=300}" Height="26" Margin="0,0,8,0"
+                                         VerticalContentAlignment="Center" Background="#2D2D2D" Foreground="#DCDCDC" BorderBrush="#444444" CaretBrush="#DCDCDC"/>
+                            </DockPanel>
+                        </StackPanel>
+                        <!-- 과거 날짜 조회 중 안내 배너 -->
+                        <Border Grid.Row="2" Background="#3A3218" Padding="10,4"
+                                Visibility="{Binding IsPastDate, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding PastDateText}" Foreground="#F0C674" FontSize="11"/>
+                        </Border>
+
+                        <DataGrid Grid.Row="3" ItemsSource="{Binding RowsView}" SelectedItem="{Binding SelectedRow}"
+                                  behaviors:ResultGridColumns.Headers="{Binding HeaderColumns}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow"
+                                  CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserSortColumns="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#222222"
+                                  Background="#121212" AlternationCount="2"
+                                  Foreground="#DCDCDC" BorderThickness="0" FontSize="12" RowHeight="24"
+                                  EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.IsDeferredScrollingEnabled="False">
+                            <DataGrid.Resources>
+                                <!-- 컬럼 헤더: 이름 + 필터 버튼 (필터 적용 중이면 파란색) -->
+                                <DataTemplate x:Key="ResultHeaderTemplate">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Margin="6,0,0,0" Cursor="Hand" ToolTip="값 필터"
+                                                Command="{Binding DataContext.OpenColumnFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding Index}">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="bd" Background="Transparent" CornerRadius="2" Padding="3,1">
+                                                        <ContentPresenter VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="bd" Property="Background" Value="#3D3D3D"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <TextBlock FontSize="9">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="▼"/>
+                                                        <Setter Property="Foreground" Value="#666666"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFiltered}" Value="True">
+                                                                <Setter Property="Text" Value="▼●"/>
+                                                                <Setter Property="Foreground" Value="#4FA3E3"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Button>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </DataGrid.Resources>
+                            <DataGrid.RowStyle>
+                                <!-- 행 배경은 전부 여기서 관리 (DataGrid.RowBackground를 쓰면 선택 색이 덮여 안 보일 수 있음)
+                                     선택 행: 밝은 파란 배경 + 왼쪽 강조 바 + 흰 글자 / NG 선택 행은 붉은 톤 유지 -->
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Background" Value="#121212"/>
+                                    <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                                            <Setter Property="Background" Value="#171717"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsNg}" Value="True">
+                                            <Setter Property="Background" Value="#3A1818"/>
+                                        </DataTrigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#262626"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#264F78"/>
+                                            <Setter Property="BorderBrush" Value="#4FA3E3"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsNg}" Value="True"/>
+                                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Background" Value="#5A2228"/>
+                                            <Setter Property="BorderBrush" Value="#FF6B6B"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="이미지 폴더 열기" Command="{Binding OpenFolderCommand}"/>
+                                    <MenuItem Header="이미지 열기" Command="{Binding OpenImageCommand}"/>
+                                    <Separator/>
+                                    <MenuItem Header="행 복사" Command="{Binding CopyRowCommand}"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                        </DataGrid>
+
+                        <!-- 헤더 필터 팝업 (클릭한 위치에 표시, 바깥 클릭 시 닫힘) -->
+                        <Popup IsOpen="{Binding IsColumnFilterOpen, Mode=TwoWay}" StaysOpen="False" Placement="MousePoint" AllowsTransparency="True">
+                            <Border Width="250" Background="#252525" BorderBrush="#4FA3E3" BorderThickness="1" CornerRadius="4" Padding="8">
+                                <StackPanel>
+                                    <TextBlock Foreground="#DCDCDC" FontWeight="Bold" FontSize="12" Margin="0,0,0,6">
+                                        <Run Text="필터: "/><Run Text="{Binding FilterColumnName, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBox Text="{Binding FilterSearchText, UpdateSourceTrigger=PropertyChanged, Delay=200}" Height="24"
+                                             VerticalContentAlignment="Center" Background="#1A1A1A" Foreground="#DCDCDC" BorderBrush="#444444" CaretBrush="#DCDCDC"
+                                             ToolTip="값 검색"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,6">
+                                        <Button Content="전체 선택" Command="{Binding CheckAllFilterValuesCommand}" CommandParameter="True"
+                                                Height="22" Padding="8,0" Background="#2D2D2D" Foreground="#DCDCDC" BorderBrush="#444444" Cursor="Hand"/>
+                                        <Button Content="전체 해제" Command="{Binding CheckAllFilterValuesCommand}" CommandParameter="False" Margin="4,0,0,0"
+                                                Height="22" Padding="8,0" Background="#2D2D2D" Foreground="#DCDCDC" BorderBrush="#444444" Cursor="Hand"/>
+                                    </StackPanel>
+                                    <ListBox ItemsSource="{Binding FilterValuesView}" MaxHeight="260" Background="#1A1A1A" BorderBrush="#333333"
+                                             VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsChecked}" Foreground="#DCDCDC">
+                                                    <TextBlock>
+                                                        <Run Text="{Binding Display, Mode=OneWay}"/>
+                                                        <Run Text="{Binding Count, Mode=OneWay, StringFormat=' ({0})'}" Foreground="#777777"/>
+                                                    </TextBlock>
+                                                </CheckBox>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                    <DockPanel Margin="0,8,0,0" LastChildFill="False">
+                                        <Button DockPanel.Dock="Left" Content="이 컬럼 필터 해제" Command="{Binding ClearColumnFilterCommand}"
+                                                Height="24" Padding="8,0" Background="#2D2D2D" Foreground="#DCDCDC" BorderBrush="#444444" Cursor="Hand"/>
+                                        <Button DockPanel.Dock="Right" Content="적용" Command="{Binding ApplyColumnFilterCommand}" Width="60"
+                                                Height="24" Background="#1F4E79" Foreground="White" BorderBrush="#4FA3E3" Cursor="Hand"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+
+                        <!-- 기록 없음 / 불러오는 중 안내 -->
+                        <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" Foreground="#666666" FontSize="13"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                                   Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVis}}"/>
+
+                        <!-- 센서별 최신 판정 (크게 표시) -->
+                        <Border Grid.Row="4" Background="#1A1A1A" BorderBrush="#333333" BorderThickness="0,1,0,0" Padding="6">
+                            <Grid>
+                                <TextBlock Text="검사 대기 중" Foreground="#555555" FontSize="16" Height="120" Padding="0,48,0,0"
+                                           HorizontalAlignment="Center" TextAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding LatestResults.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding LatestResults}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Height="120" Margin="3" CornerRadius="6">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#1B5E20"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsNg}" Value="True">
+                                                                <Setter Property="Background" Value="#B71C1C"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid Margin="10,6">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock Grid.Row="0" Text="{Binding Sensor}" Foreground="#DDFFFFFF" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                                                    <Viewbox Grid.Row="1" StretchDirection="DownOnly">
+                                                        <TextBlock Text="{Binding Result}" Foreground="White" FontSize="48" FontWeight="Black"/>
+                                                    </Viewbox>
+                                                    <TextBlock Grid.Row="2" Foreground="#CCFFFFFF" FontSize="11" HorizontalAlignment="Center">
+                                                        <Run Text="{Binding Point, Mode=OneWay}"/>  ·  <Run Text="{Binding Time, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Border>
+                    </Grid>
+            </Grid>
+
+            <!-- 하단 로그 패널: 평소엔 탭 바만 보이고, LOG 탭을 누르면 펼쳐짐 -->
+            <Border Grid.Row="2" Background="#1E1E1E" BorderBrush="#121212" BorderThickness="0,1,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="25"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#252525" VerticalAlignment="Center">
-                        <TextBlock Text="LOG MESSAGES" Foreground="#888888" FontSize="11" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold"/>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#252525">
+                        <ToggleButton x:Name="LogTab" Cursor="Hand" ToolTip="로그 보기/숨기기">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="border" Background="Transparent" Padding="12,0" BorderThickness="0,2,0,0" BorderBrush="Transparent">
+                                        <TextBlock x:Name="label" Text="▲  LOG MESSAGES" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="border" Property="Background" Value="#2F2F2F"/>
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="label" Property="Text" Value="▼  LOG MESSAGES"/>
+                                            <Setter TargetName="label" Property="Foreground" Value="#DCDCDC"/>
+                                            <Setter TargetName="border" Property="BorderBrush" Value="#4FA3E3"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
                     </StackPanel>
-                    <ListBox Grid.Row="1" ItemsSource="{Binding logger.LogMessages}" ScrollViewer.VerticalScrollBarVisibility="Auto"
+
+                    <ListBox Grid.Row="1" Height="200" ItemsSource="{Binding logger.LogMessages}" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 Visibility="{Binding IsChecked, ElementName=LogTab, Converter={StaticResource BoolToVis}}"
                  Background="#121212" BorderThickness="0" Foreground="#DCDCDC"
                  FontSize="12" FontFamily="Consolas">
                         <ListBox.ItemTemplate>

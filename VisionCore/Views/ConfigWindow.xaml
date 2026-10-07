@@ -165,6 +165,11 @@
                                 <Button Grid.Column="1" Content="찾아보기" Command="{Binding BrowseSavePathCommand}"
                                         Height="34" Margin="0,0,0,15" Background="#3D3D3D" Foreground="White" BorderThickness="0" Cursor="Hand"/>
                             </Grid>
+
+                            <TextBlock Text="AUTO DELETE (디스크 사용률 %)" Style="{StaticResource InputLabel}"/>
+                            <TextBox Text="{Binding Settings.DiskLimitPercent, UpdateSourceTrigger=LostFocus}"/>
+                            <TextBlock Text="이 사용률을 넘으면 가장 오래된 날짜의 이미지부터 자동 삭제합니다. (0 = 사용 안 함, 50~95)"
+                                       Foreground="#888888" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,15"/>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>

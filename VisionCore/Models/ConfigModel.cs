@@ -63,6 +63,14 @@ namespace VisionCore.Models
         // --- 결과 이미지 저장 경로 ---
         public string SaveRootPath { get => _saveRootPath; set { _saveRootPath = value; OnPropertyChanged(); } }
 
+        // 디스크 사용률이 이 % 이상이면 오래된 날짜 이미지부터 자동 삭제 (0 = 사용 안 함, 50~95)
+        private int _diskLimitPercent = 85;
+        public int DiskLimitPercent
+        {
+            get => _diskLimitPercent;
+            set { _diskLimitPercent = value <= 0 ? 0 : Math.Min(95, Math.Max(50, value)); OnPropertyChanged(); }
+        }
+
         // Config 저장 시 발생 (재시작 없이 화면에 즉시 반영하기 위함)
         public event EventHandler ConfigChanged;
 
@@ -83,6 +91,9 @@ namespace VisionCore.Models
                 CellPointNumber = ini.Read("Point", "CurrentPointNumberCell", "D0");
 
                 SaveRootPath = ini.Read("Save", "RootPath", Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "VisionImage"));
+
+                int limit;
+                DiskLimitPercent = int.TryParse(ini.Read("Save", "DiskLimitPercent", "85"), out limit) ? limit : 85;
             }
 
             CustomFields.Clear();
@@ -118,6 +129,7 @@ namespace VisionCore.Models
                 ini.Write("Point", "CurrentPointNumberCell", CellPointNumber);
 
                 ini.Write("Save", "RootPath", SaveRootPath);
+                ini.Write("Save", "DiskLimitPercent", DiskLimitPercent.ToString());
 
                 File.WriteAllText(_fieldsPath, JsonConvert.SerializeObject(CustomFields, Formatting.Indented));
 

@@ -25,6 +25,12 @@ public class MainViewModel : ViewModelBase
     // 연결된 센서 = 화면에 표시되는 타일 목록 (자유 배치, 드래그/리사이즈 가능)
     public ObservableCollection<SensorSessionViewModel> Sensors { get; } = new ObservableCollection<SensorSessionViewModel>();
 
+    // 하단 Results 탭 (날짜별 CSV 결과 리스트)
+    public ResultHistoryViewModel ResultHistory { get; } = new ResultHistoryViewModel();
+
+    // 상단 헤더 디스크 사용량 표시 + 자동 삭제
+    public DiskStatusViewModel Disk { get; } = new DiskStatusViewModel();
+
     private DiscoveredDevice _selectedDevice;
     public DiscoveredDevice SelectedDevice
     {
@@ -40,6 +46,27 @@ public class MainViewModel : ViewModelBase
         ScanDevicesCommand = new RelayCommand(async o => await ScanDevices());
         RemoveSensorCommand = new RelayCommand(async o => await RemoveSensorAsync(o as SensorSessionViewModel));
         ArrangeTilesCommand = new RelayCommand(o => ArrangeTiles());
+
+        ResultHistory.RowSelected += ShowRowImageOnSensor;
+    }
+
+    // 결과 리스트에서 고른 행의 이미지를 그 센서 타일 디스플레이에 표시
+    private void ShowRowImageOnSensor(VisionCore.Models.ResultRow row)
+    {
+        if (string.IsNullOrEmpty(row.ImagePath)) return;
+
+        var session = Sensors.FirstOrDefault(s => s.DisplayName == row.Sensor);
+        if (session == null) return; // 해당 센서가 연결돼 있지 않음
+
+        if (!System.IO.File.Exists(row.ImagePath))
+        {
+            Logger.Warning($"이미지 파일이 없습니다: {row.ImagePath}");
+            return;
+        }
+
+        // 먼저 이미지를 바로 띄우고, OFFLINE이면 센서로 재검사해서 그래픽/판정까지 갱신 (ONLINE은 생산 검사 보호를 위해 이미지만)
+        session.ShowImage?.Invoke(row.ImagePath);
+        if (!session.IsOnline) session.Reinspect(row.ImagePath);
     }
 
     private async Task ScanDevices()
@@ -84,29 +111,41 @@ public class MainViewModel : ViewModelBase
         if (connected)
         {
             Sensors.Add(session);
-            ArrangeTile(session, Sensors.Count - 1);
+            ArrangeTiles();
         }
     }
 
-    // 타일 1개의 위치/크기를 격자 자리에 맞게 재배치 (이후 사용자가 자유롭게 드래그/리사이즈 가능)
-    private void ArrangeTile(SensorSessionViewModel session, int index)
-    {
-        const int columns = 2;
+    // 대시보드(타일 영역) 실제 크기 - View의 SizeChanged에서 갱신
+    public double ViewportWidth { get; set; } = 960;
+    public double ViewportHeight { get; set; } = 840;
 
-        session.IsMaximized = false;
-        session.ZIndex = 0;
-        session.Width = 480;
-        session.Height = 420;
-        session.X = (index % columns) * session.Width;
-        session.Y = (index / columns) * session.Height;
-    }
+    // true = 격자 정렬 상태 (대시보드 크기가 바뀌면 자동 재정렬). 사용자가 타일을 드래그/리사이즈하면 false
+    public bool IsAutoArranged { get; set; } = true;
 
-    // 모든 타일을 격자 형태로 다시 정렬 (드래그/리사이즈로 흐트러졌을 때 되돌리는 용도)
-    private void ArrangeTiles()
+    // 모든 타일을 센서 개수에 맞춰 대시보드 전체를 꽉 채우도록 세로로 정렬 (오른쪽은 결과 리스트)
+    // (1~3개: 1열 세로, 4~6개: 2열, 7~9개: 3열 ...)
+    public void ArrangeTiles()
     {
-        for (int i = 0; i < Sensors.Count; i++)
+        IsAutoArranged = true;
+
+        int count = Sensors.Count;
+        if (count == 0) return;
+
+        int columns = (count + 2) / 3;
+        int rows = (int)Math.Ceiling((double)count / columns);
+
+        double tileWidth = Math.Max(280, Math.Floor(ViewportWidth / columns));
+        double tileHeight = Math.Max(220, Math.Floor(ViewportHeight / rows));
+
+        for (int i = 0; i < count; i++)
         {
-            ArrangeTile(Sensors[i], i);
+            var session = Sensors[i];
+            session.IsMaximized = false;
+            session.ZIndex = 0;
+            session.Width = tileWidth;
+            session.Height = tileHeight;
+            session.X = (i % columns) * tileWidth;
+            session.Y = (i / columns) * tileHeight;
         }
     }
 
@@ -116,6 +155,8 @@ public class MainViewModel : ViewModelBase
 
         await session.DisconnectAsync();
         Sensors.Remove(session);
+        ResultHistory.RemoveLatest(session.DisplayName);
+        if (IsAutoArranged) ArrangeTiles();
     }
 
     private async Task ExecuteClose()
@@ -124,6 +165,7 @@ public class MainViewModel : ViewModelBase
         {
             await session.DisconnectAsync();
         }
+        ResultCsvService.Instance.Shutdown(); // 남은 결과 CSV 기록 마무리
         System.Windows.Application.Current.Shutdown();
     }
 

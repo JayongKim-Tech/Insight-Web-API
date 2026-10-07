@@ -28,9 +28,6 @@ namespace VisionCore.ViewModels
         public ConfigModel Settings => ConfigModel.Instance;
         public DisplayViewModel DisplayVM { get; } = new DisplayViewModel();
 
-        // Point 번호별 최신 결과 슬롯 (PointCount 개수만큼, 트리거될 때마다 해당 Point 슬롯만 갱신)
-        public ObservableCollection<InspectionResultItem> Results { get; } = new ObservableCollection<InspectionResultItem>();
-
         // 타일 자유 배치(드래그/리사이즈)용 좌표·크기
         private double _x;
         public double X { get => _x; set { _x = value; OnPropertyChanged(); } }
@@ -56,7 +53,7 @@ namespace VisionCore.ViewModels
         public double PrevWidth { get; set; }
         public double PrevHeight { get; set; }
 
-        // 타일의 CvsDisplay가 로드된 후 InSightBehavior가 연결해주는 콜백 (결과 이미지 미리보기용)
+        // 타일의 CvsDisplay가 로드된 후 InSightBehavior가 연결해주는 콜백 (결과 리스트에서 고른 행의 이미지 표시용)
         public Action<string> ShowImage { get; set; }
 
         public ICommand DisconnectCommand { get; }
@@ -64,7 +61,6 @@ namespace VisionCore.ViewModels
         public ICommand OpenJobCommand { get; }
         public ICommand SaveJobCommand { get; }
         public ICommand SaveAsJobCommand { get; }
-        public ICommand PreviewImageCommand { get; }
 
         private string _imgUri;
         private string _selectedJobPath;
@@ -89,6 +85,14 @@ namespace VisionCore.ViewModels
             }
         }
 
+        // In-Sight 스프레드시트(편집기)가 이 센서에 붙어 있으면 센서가 ONLINE 전환을 거부함 (센서 자체 규칙, 우회 불가)
+        private bool _isEditorAttached;
+        public bool IsEditorAttached
+        {
+            get => _isEditorAttached;
+            private set { _isEditorAttached = value; OnPropertyChanged(); }
+        }
+
         private bool _isLive;
         public bool IsLive
         {
@@ -110,40 +114,6 @@ namespace VisionCore.ViewModels
             OpenJobCommand = new RelayCommand(o => ExcuteLoadJob());
             SaveJobCommand = new RelayCommand(async o => await ExcuteSaveJob());
             SaveAsJobCommand = new RelayCommand(async o => await ExecuteSaveAsJob());
-            PreviewImageCommand = new RelayCommand(o => ExecutePreviewImage(o as InspectionResultItem));
-
-            Settings.ConfigChanged += OnConfigChanged;
-            SyncResultSlots();
-        }
-
-        private void OnConfigChanged(object sender, EventArgs e)
-        {
-            // Config 창에서 Point 구성을 바꾸면 재시작 없이 바로 슬롯에 반영
-            System.Windows.Application.Current.Dispatcher.Invoke(SyncResultSlots);
-        }
-
-        // 설정된 Point 개수에 맞춰 결과 슬롯을 맞춤 (기존에 쌓인 결과는 번호가 유지되는 한 보존)
-        private void SyncResultSlots()
-        {
-            int count = Math.Max(1, Settings.PointCount);
-            var labels = Enumerable.Range(1, count).Select(i => $"Point{i}").ToList();
-
-            for (int i = Results.Count - 1; i >= 0; i--)
-            {
-                if (!labels.Contains(Results[i].PointName)) Results.RemoveAt(i);
-            }
-
-            foreach (var label in labels)
-            {
-                if (!Results.Any(r => r.PointName == label))
-                    Results.Add(new InspectionResultItem { PointName = label });
-            }
-        }
-
-        private void ExecutePreviewImage(InspectionResultItem item)
-        {
-            if (item == null || string.IsNullOrEmpty(item.ImagePath)) return;
-            ShowImage?.Invoke(item.ImagePath);
         }
 
         public async Task<bool> ConnectAsync()
@@ -164,7 +134,10 @@ namespace VisionCore.ViewModels
                 {
                     IsConnected = true;
                     IsOnline = Sensor.Online;
+                    IsEditorAttached = Sensor.EditorAttached;
                     Sensor.ResultsChanged += OnSensorResultsChanged;
+                    Sensor.StateChanged += OnSensorStateChanged;
+                    Sensor.EditorAttachedChanged += OnSensorStateChanged;
                     Logger.Success($"[{Device.DisplayName}] 센서 연결 성공!");
                     return true;
                 }
@@ -180,11 +153,11 @@ namespace VisionCore.ViewModels
 
         public async Task DisconnectAsync()
         {
-            Settings.ConfigChanged -= OnConfigChanged;
-
             if (Sensor.Connected)
             {
                 Sensor.ResultsChanged -= OnSensorResultsChanged;
+                Sensor.StateChanged -= OnSensorStateChanged;
+                Sensor.EditorAttachedChanged -= OnSensorStateChanged;
                 await Sensor.Disconnect();
                 IsConnected = false;
                 Logger.Info($"[{Device.DisplayName}] 센서 연결 해제 완료.");
@@ -201,6 +174,14 @@ namespace VisionCore.ViewModels
                 return;
             }
 
+            if (Sensor.EditorAttached)
+            {
+                Logger.Warning($"[{Device.DisplayName}] In-Sight 스프레드시트(편집기)가 연결돼 있어 센서가 ONLINE/OFFLINE 변경을 막고 있습니다. 편집기를 닫은 뒤 다시 시도하세요.");
+                _isOnline = !targetValue;
+                OnPropertyChanged(nameof(IsOnline));
+                return;
+            }
+
             try
             {
                 await Sensor.SetSoftOnlineAsync(targetValue);
@@ -208,10 +189,24 @@ namespace VisionCore.ViewModels
             }
             catch (Exception ex)
             {
-                Logger.Error($"[{Device.DisplayName}] 상태 변경 오류: {ex}");
+                Logger.Warning($"[{Device.DisplayName}] 상태 변경 실패: {ex.GetBaseException().Message.Trim()}");
                 _isOnline = !targetValue;
                 OnPropertyChanged(nameof(IsOnline));
             }
+        }
+
+        // 센서 쪽에서 상태가 바뀌면(편집기 연결/해제, 편집기에서 Online 변경 등) 화면 토글을 실제 상태에 맞춤
+        private void OnSensorStateChanged(object sender, EventArgs e)
+        {
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                IsEditorAttached = Sensor.EditorAttached;
+                if (_isOnline != Sensor.Online)
+                {
+                    _isOnline = Sensor.Online; // setter를 거치지 않음 (센서에 다시 명령 보내지 않도록)
+                    OnPropertyChanged(nameof(IsOnline));
+                }
+            }));
         }
 
         private async void ExcuteLive(bool isLive)
@@ -328,6 +323,10 @@ namespace VisionCore.ViewModels
                 if (_imgUri == uri) return;
                 _imgUri = uri;
 
+                // 결과 저장(이미지/CSV)은 ONLINE(생산 검사) 상태에서만.
+                // OFFLINE의 수동 트리거·결과 리스트 재검사 결과는 화면에만 표시하고 기록하지 않음
+                if (!IsOnline) return;
+
                 await Sensor.GetLatestResult();
                 var item = FileManagerModel.Instance.BuildPointResult(Sensor, DisplayName);
                 if (item == null) return;
@@ -340,19 +339,20 @@ namespace VisionCore.ViewModels
                 catch (Exception exDown)
                 {
                     Logger.Error($"[{DisplayName}] 이미지 다운로드 실패: {exDown.Message}");
+                    ResultCsvService.Instance.Append(item); // 이미지가 없어도 판정 결과는 기록
                     return;
                 }
 
-                // 결과 이미지를 즉시 저장 (썸네일 클릭 시 디스플레이 미리보기에 사용)
+                // 결과 이미지를 BMP로 저장 (무손실 - 결과 리스트에서 오프라인 재검사 시 원본과 같은 조건으로 검사)
                 try
                 {
                     string dir = Path.Combine(Settings.SaveRootPath,
                         item.Timestamp.ToString("yyyy"), item.Timestamp.ToString("MM"), item.Timestamp.ToString("dd"),
                         SanitizeForPath(DisplayName), item.IsOk == true ? "OK" : "NG");
                     Directory.CreateDirectory(dir);
-                    string path = Path.Combine(dir, $"{item.Timestamp:HH-mm-ss-fff}.jpg");
+                    string path = Path.Combine(dir, $"{item.Timestamp:HH-mm-ss-fff}.bmp");
 
-                    await Task.Run(() => File.WriteAllBytes(path, bytes));
+                    await Task.Run(() => File.WriteAllBytes(path, ToBmpBytes(bytes)));
                     item.ImagePath = path;
                 }
                 catch (Exception exSave)
@@ -360,32 +360,96 @@ namespace VisionCore.ViewModels
                     Logger.Error($"[{DisplayName}] 이미지 저장 실패: {exSave.Message}");
                 }
 
-                try
-                {
-                    var bmp = new BitmapImage();
-                    using (var ms = new MemoryStream(bytes))
-                    {
-                        bmp.BeginInit();
-                        bmp.CacheOption = BitmapCacheOption.OnLoad;
-                        bmp.DecodePixelWidth = 160;
-                        bmp.StreamSource = ms;
-                        bmp.EndInit();
-                    }
-                    bmp.Freeze();
-                    item.Thumbnail = bmp;
-                }
-                catch (Exception exImg)
-                {
-                    Logger.Error($"[{DisplayName}] 썸네일 로드 실패: {exImg.Message}");
-                }
-
-                System.Windows.Application.Current.Dispatcher.Invoke(() => UpdatePointSlot(item));
+                ResultCsvService.Instance.Append(item);
             }
             catch (Exception ex)
             {
                 Logger.Error($"[{Device.DisplayName}] {ex}");
             }
         }
+
+        #region 오프라인 재검사 (결과 리스트에서 고른 이미지를 센서에 올려 잡 재실행)
+
+        private string _pendingReinspectPath;
+        private bool _isReinspecting;
+
+        // 이미지 업로드(loadImage)를 지원하지 않는 센서/에뮬레이터는 404 -> 이후 조용히 이미지 표시만
+        private bool _reinspectUnsupported;
+        private bool _reinspectErrorLogged;
+
+        /// <summary>
+        /// 저장된 이미지를 센서에 올려 다시 검사 -> 센서 디스플레이 그래픽/판정이 그 이미지 기준으로 갱신됨
+        /// OFFLINE에서만 호출 (결과 저장도 OFFLINE에선 안 되므로 기록에 섞이지 않음)
+        /// 빠르게 연속 선택하면 진행 중인 1건이 끝난 뒤 마지막 선택만 처리
+        /// </summary>
+        public async void Reinspect(string imagePath)
+        {
+            if (_reinspectUnsupported) return;
+
+            _pendingReinspectPath = imagePath;
+            if (_isReinspecting) return;
+
+            _isReinspecting = true;
+            try
+            {
+                while (_pendingReinspectPath != null)
+                {
+                    string path = _pendingReinspectPath;
+                    _pendingReinspectPath = null;
+
+                    if (!Sensor.Connected || IsOnline) return;
+
+                    try
+                    {
+                        byte[] bmp = await Task.Run(() => ToBmpBytes(File.ReadAllBytes(path)));
+                        await Sensor.LoadImage(bmp);
+                    }
+                    catch (Exception ex)
+                    {
+                        // 로그는 세션당 1번만 (클릭마다 에러가 쌓이지 않도록)
+                        if (ex.Message.Contains("404"))
+                        {
+                            _reinspectUnsupported = true;
+                            _pendingReinspectPath = null;
+                            Logger.Info($"[{DisplayName}] 이 센서는 이미지 재검사를 지원하지 않아 저장된 이미지만 표시합니다.");
+                        }
+                        else if (!_reinspectErrorLogged)
+                        {
+                            _reinspectErrorLogged = true;
+                            Logger.Warning($"[{DisplayName}] 재검사 실패 (이미지만 표시): {ex.GetBaseException().Message.Trim()}");
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                _isReinspecting = false;
+            }
+        }
+
+        private static bool _jpegSourceWarned;
+
+        // 센서 이미지(JPEG/PNG/BMP 등)를 BMP로 변환. 흑백 이미지는 8bit 흑백 BMP로 유지됨 (GDI+)
+        private static byte[] ToBmpBytes(byte[] imageBytes)
+        {
+            if (imageBytes.Length > 2 && imageBytes[0] == 'B' && imageBytes[1] == 'M') return imageBytes; // 이미 BMP
+
+            if (!_jpegSourceWarned && imageBytes.Length > 2 && imageBytes[0] == 0xFF && imageBytes[1] == 0xD8)
+            {
+                _jpegSourceWarned = true;
+                Logger.Warning("센서가 결과 이미지를 JPEG로 전송합니다. BMP로 저장하지만 원본 압축 손실은 복구되지 않습니다.");
+            }
+
+            using (var input = new MemoryStream(imageBytes))
+            using (var image = System.Drawing.Image.FromStream(input))
+            using (var output = new MemoryStream())
+            {
+                image.Save(output, System.Drawing.Imaging.ImageFormat.Bmp);
+                return output.ToArray();
+            }
+        }
+
+        #endregion
 
         // 센서 표시 이름(예: "[Emulator] 127.0.0.1:8087")에는 ':' 등 경로에 쓸 수 없는 문자가
         // 포함될 수 있어 폴더명으로 그대로 쓰면 저장이 실패함 -> 치환해서 사용
@@ -398,19 +462,6 @@ namespace VisionCore.ViewModels
                 name = name.Replace(c, '_');
             }
             return name;
-        }
-
-        private void UpdatePointSlot(InspectionResultItem item)
-        {
-            var existing = Results.FirstOrDefault(r => r.PointName == item.PointName);
-            if (existing != null)
-            {
-                Results[Results.IndexOf(existing)] = item;
-            }
-            else
-            {
-                Results.Add(item);
-            }
         }
     }
 }
