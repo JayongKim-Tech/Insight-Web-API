@@ -150,8 +150,8 @@ VisionCore/
 **요구 사항**: Windows 10/11, Visual Studio 2022 (.NET Framework 4.8 개발 도구), Cognex In-Sight 센서 또는 In-Sight Emulator
 
 ```bash
-git clone <repo-url>
-# Visual Studio에서 VisionCore.sln 열기 → NuGet 복원 → 빌드(F5)
+git clone https://github.com/JayongKim-Tech/Insight-Web-API.git
+# Visual Studio에서 VisionCore/VisionCore.sln 열기 → NuGet 복원 → 빌드(F5)
 ```
 
 > `dotnet build` 가 아닌 **Visual Studio / MSBuild** 로 빌드해야 합니다 (.NET Framework WPF 프로젝트).
@@ -161,9 +161,3 @@ git clone <repo-url>
 2. 장비 선택 후 `Add` → 대시보드에 타일 추가
 3. `Configuration` 에서 결과 셀·Point·저장 경로 설정
 4. ONLINE 전환 → 검사 결과 자동 저장 및 이력 확인
-
----
-
-## 개발자
-
-**(이름)** · rlawkdyd13@gmail.com
