@@ -54,7 +54,7 @@ namespace Cognex.InSight.Web.Controls
         {
             if (_inSight == null)
                 return;
-
+            
             // Get the graphics that may be rendered later in the OnPaint
             try
             {

@@ -71,10 +71,34 @@ namespace VisionCore.Models
             set { _diskLimitPercent = value <= 0 ? 0 : Math.Min(95, Math.Max(50, value)); OnPropertyChanged(); }
         }
 
+        // 그래픽 글자(PlotString 등) 표시 배율 - 화면 표시만 바뀌고 잡에는 영향 없음 (ToolSetup 오버레이 탭에서 조절)
+        private double _graphicsTextScale = 2.5;
+        public double GraphicsTextScale
+        {
+            get => _graphicsTextScale;
+            set
+            {
+                _graphicsTextScale = Math.Max(0.3, Math.Min(10, value));
+                Cognex.InSight.Web.Controls.GraphicsHelper.TextScale = (float)_graphicsTextScale;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>표시 설정만 바로 저장 (전체 Save처럼 다시 읽거나 알림을 띄우지 않음)</summary>
+        public void SaveDisplaySettings()
+        {
+            try { new ini(_iniPath).Write("Display", "GraphicsTextScale", GraphicsTextScale.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
+            catch (Exception ex) { Logger.Error("표시 설정 저장 실패: " + ex.Message); }
+        }
+
         // Config 저장 시 발생 (재시작 없이 화면에 즉시 반영하기 위함)
         public event EventHandler ConfigChanged;
 
-        private ConfigModel() { Load(); }
+        private ConfigModel()
+        {
+            Load();
+            GraphicsTextScale = _graphicsTextScale;   // ini에 값이 없어도 그리기 쪽에 기본값 전달
+        }
 
         public void Load()
         {
@@ -94,6 +118,10 @@ namespace VisionCore.Models
 
                 int limit;
                 DiskLimitPercent = int.TryParse(ini.Read("Save", "DiskLimitPercent", "85"), out limit) ? limit : 85;
+
+                double textScale;
+                if (double.TryParse(ini.Read("Display", "GraphicsTextScale", "2.5"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out textScale))
+                    GraphicsTextScale = textScale;
             }
 
             CustomFields.Clear();

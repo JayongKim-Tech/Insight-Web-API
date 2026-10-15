@@ -105,6 +105,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Views\ToolSetupWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -119,7 +123,16 @@
     <Compile Include="Models\ini.cs" />
     <Compile Include="Models\InspectionResultItem.cs" />
     <Compile Include="Models\LoggerService.cs" />
+    <Compile Include="Models\JobEditor\AlignTemplate.cs" />
+    <Compile Include="Models\JobEditor\CellExpression.cs" />
+    <Compile Include="Models\JobEditor\JobToolScanner.cs" />
+    <Compile Include="Models\JobEditor\KeyParamStore.cs" />
+    <Compile Include="Models\JobEditor\EasyHelp.cs" />
+    <Compile Include="Models\JobEditor\ToolCatalog.cs" />
+    <Compile Include="Models\JobEditor\ToolCell.cs" />
+    <Compile Include="Models\JobEditor\ToolHelp.cs" />
     <Compile Include="Models\ResultCsvService.cs" />
+    <Compile Include="ViewModels\AlignSetupViewModel.cs" />
     <Compile Include="ViewModels\ConfigViewModel.cs" />
     <Compile Include="ViewModels\DiskStatusViewModel.cs" />
     <Compile Include="ViewModels\DisplayViewModel.cs" />
@@ -128,6 +141,11 @@
     <Compile Include="ViewModels\RelayCommand.cs" />
     <Compile Include="ViewModels\ResultHistoryViewModel.cs" />
     <Compile Include="ViewModels\SensorSessionViewModel.cs" />
+    <Compile Include="ViewModels\ToolSetupViewModel.cs" />
+    <Compile Include="ViewModels\RoiViewModel.cs" />
+    <Compile Include="ViewModels\OverlayViewModel.cs" />
+    <Compile Include="Views\RoiCanvas.cs" />
+    <Compile Include="Views\ParamLinkDialog.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="Views\ConfigWindow.xaml.cs">
       <DependentUpon>ConfigWindow.xaml</DependentUpon>
@@ -136,6 +154,9 @@
     <Compile Include="Views\ResultGridColumns.cs" />
     <Compile Include="Views\JobBrowserWindow.xaml.cs">
       <DependentUpon>JobBrowserWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ToolSetupWindow.xaml.cs">
+      <DependentUpon>ToolSetupWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
@@ -166,6 +187,17 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <None Include="Resources\Language.ini" />
+    <EmbeddedResource Include="Resources\ToolCatalog.json" />
+    <!-- .ko 가 문화권 접미사로 인식돼 위성 어셈블리로 빠지지 않도록 -->
+    <EmbeddedResource Include="Resources\ToolHelp.ko.json">
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\ToolEasy.ko.json">
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\ToolDesc.ko.json">
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

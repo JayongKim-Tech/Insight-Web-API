@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>VisionCore 구조 가이드</title>
+<style>
+  :root{--bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--sub:#94a3b8;
+        --l1:#3b82f6;--l2:#10b981;--l3:#f59e0b;--l4:#a855f7;--sensor:#ef4444;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);line-height:1.55}
+  .wrap{max-width:1150px;margin:0 auto;padding:30px 20px 80px}
+  h1{margin:0 0 4px;font-size:28px}
+  h2{margin:48px 0 14px;font-size:21px;border-left:5px solid var(--l1);padding-left:10px}
+  .sub{color:var(--sub);font-size:14px}
+  nav a{color:#93c5fd;margin-right:14px;font-size:14px;text-decoration:none}
+  code{background:#0b1220;padding:1px 6px;border-radius:4px;color:#fde68a;font-size:13px}
+
+  /* 층 구조 */
+  .layer{border-radius:12px;padding:14px 18px;margin:0 0 6px;border:2px solid;background:var(--card)}
+  .layer h3{margin:0 0 8px;font-size:17px}
+  .layer .path{font-size:13px;color:var(--sub);font-weight:normal}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:#0b1220;border-radius:8px;padding:6px 10px;font-size:13px;cursor:default;border:1px solid #334155}
+  .chip b{display:block;font-size:13px}
+  .chip span{color:var(--sub);font-size:12px}
+  .chip.key{border-color:#fde68a}
+  .arrow-v{text-align:center;color:var(--sub);font-size:13px;margin:2px 0 8px}
+  .sensor{background:var(--sensor);color:#fff;border-radius:12px;padding:12px;text-align:center;font-weight:bold;font-size:17px}
+
+  /* 흐름 */
+  .flow{background:var(--card);border-radius:12px;padding:16px;margin-bottom:14px}
+  .flow h4{margin:0 0 10px;font-size:15px}
+  .steps{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+  .step{padding:8px 12px;border-radius:8px;font-size:13px;font-weight:bold;color:#0b1220}
+  .step small{display:block;font-weight:normal;font-size:11px}
+  .to{color:var(--sub);font-size:20px}
+  .s0{background:#fca5a5}.s1{background:#93c5fd}.s2{background:#6ee7b7}.s3{background:#fcd34d}.s4{background:#d8b4fe}
+  .tip{margin-top:10px;font-size:13px;color:#fde68a}
+
+  /* 문제 대응 */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+  .card{background:var(--card);border-radius:12px;padding:14px 16px;border-top:4px solid}
+  .card .q{font-weight:bold;font-size:15px;margin-bottom:6px}
+  .card ul{margin:0;padding-left:18px;font-size:13px}
+
+  .risk{background:#3b1d1d;border:1px solid #7f1d1d;border-radius:12px;padding:14px 18px}
+  .risk li{margin:6px 0;font-size:14px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>VisionCore 구조 가이드</h1>
+<div class="sub">Cognex In-Sight 센서 다중 모니터링 + 잡 편집 WPF 프로그램 · net48 / C# 7.3 · 2026-10-15 기준</div>
+<nav style="margin-top:12px">
+  <a href="#layers">① 전체 구조</a><a href="#flow">② 데이터 흐름</a>
+  <a href="#toolsetup">③ 툴 설정 창</a><a href="#trouble">④ 문제 생기면</a><a href="#risk">⑤ 주의사항</a>
+</nav>
+
+<!-- ===================== 1. 층 구조 ===================== -->
+<h2 id="layers">① 전체 구조 — 4층 건물</h2>
+<div class="legend">
+  <span><i style="background:#fde68a"></i>노란 테두리 = 핵심 파일 (문제 생기면 제일 먼저 볼 곳)</span>
+</div>
+
+<div class="layer" style="border-color:var(--l4)">
+  <h3 style="color:var(--l4)">4층 · 화면 + 로직 (MVVM) <span class="path">Views/ · ViewModels/</span></h3>
+  <div class="chips">
+    <div class="chip key"><b>MainViewModel</b><span>메인 화면, 센서 여러 대 관리</span></div>
+    <div class="chip key"><b>SensorSessionViewModel</b><span>센서 1대 = 1개. 연결/결과</span></div>
+    <div class="chip"><b>ResultHistoryViewModel</b><span>결과 리스트</span></div>
+    <div class="chip"><b>DiskStatusViewModel</b><span>디스크 용량</span></div>
+    <div class="chip"><b>ConfigViewModel</b><span>설정 창</span></div>
+    <div class="chip key"><b>ToolSetupViewModel</b><span>툴 설정 창 (가장 큼, 1275줄)</span></div>
+    <div class="chip"><b>RoiViewModel + RoiCanvas</b><span>ROI 드래그</span></div>
+    <div class="chip"><b>OverlayViewModel</b><span>오버레이/레이아웃 탭</span></div>
+    <div class="chip"><b>AlignSetupViewModel</b><span>캘리브레이션/원점/데이터맵 탭</span></div>
+    <div class="chip key"><b>InSightBehavior</b><span>WinForms 부품을 WPF에 붙이는 접착제</span></div>
+  </div>
+</div>
+<div class="arrow-v">▲ 데이터 받아서 표시 &nbsp;|&nbsp; ▼ 사용자 명령 전달</div>
+
+<div class="layer" style="border-color:var(--l3)">
+  <h3 style="color:var(--l3)">3층 · 데이터 + 서비스 <span class="path">Models/</span></h3>
+  <div class="chips">
+    <div class="chip"><b>ConfigModel + ini</b><span>config.ini 읽기/쓰기</span></div>
+    <div class="chip"><b>CameraControlModel</b><span>센서 검색/연결 보조</span></div>
+    <div class="chip"><b>ResultCsvService</b><span>결과 CSV 저장</span></div>
+    <div class="chip"><b>LoggerService</b><span>로그 파일</span></div>
+  </div>
+  <div style="margin-top:10px;font-size:14px;font-weight:bold">└ JobEditor/ (잡 편집 두뇌)</div>
+  <div class="chips" style="margin-top:6px">
+    <div class="chip key"><b>CellExpression</b><span>수식 ↔ 함수명+인자 변환</span></div>
+    <div class="chip key"><b>JobToolScanner</b><span>잡에서 툴 셀 찾기</span></div>
+    <div class="chip"><b>ToolCatalog</b><span>함수별 파라미터 정의</span></div>
+    <div class="chip"><b>ToolHelp / EasyHelp</b><span>한글 설명/쉬운 이름</span></div>
+    <div class="chip"><b>KeyParamStore</b><span>★ 핵심 파라미터</span></div>
+    <div class="chip key"><b>AlignTemplate</b><span>템플릿 위치를 라벨 글자로 탐색</span></div>
+  </div>
+</div>
+<div class="arrow-v">▲▼</div>
+
+<div class="layer" style="border-color:var(--l2)">
+  <h3 style="color:var(--l2)">2층 · 화면 부품 (WinForms) <span class="path">Cognex.InSight.Web.Controls/</span></h3>
+  <div class="chips">
+    <div class="chip key"><b>CvsDisplay</b><span>이미지 표시</span></div>
+    <div class="chip key"><b>GraphicsHelper</b><span>오버레이 그래픽 그리기</span></div>
+    <div class="chip key"><b>CvsSpreadsheet</b><span>셀 그리드</span></div>
+    <div class="chip"><b>CvsSpreadsheet.Editor</b><span>Suite식 셀 편집기</span></div>
+    <div class="chip"><b>SpreadsheetGridViewExtensions</b><span>셀 그리기/서식</span></div>
+    <div class="chip"><b>ShapeEditorControl/Form</b><span>EditPoint 등 도형 편집</span></div>
+    <div class="chip"><b>CvsFilmstrip</b><span>필름스트립</span></div>
+  </div>
+</div>
+<div class="arrow-v">▲▼</div>
+
+<div class="layer" style="border-color:var(--l1)">
+  <h3 style="color:var(--l1)">1층 · 통신 엔진 <span class="path">Cognex.InSight.Web/</span></h3>
+  <div class="chips">
+    <div class="chip key"><b>CvsInSight</b><span>센서 1대와의 모든 대화. 제일 중요</span></div>
+    <div class="chip"><b>CogSocket/</b><span>WebSocket 송수신 (거의 안 건드림)</span></div>
+    <div class="chip"><b>Serialization/</b><span>센서 JSON → C# 객체</span></div>
+  </div>
+  <div style="margin-top:10px;font-size:13px;color:var(--sub)">
+    주요 함수: <code>Connect</code> <code>Disconnect</code> <code>SetCellValue</code> <code>SetCellExpression</code>
+    <code>GetLatestResult</code> <code>LoadJob</code> <code>RefreshAfterJobLoadAsync</code><br>
+    주요 이벤트: <code>ResultsChanged</code> <code>ConnectedChanged</code> <code>JobReloaded</code>
+  </div>
+</div>
+<div class="arrow-v">▲▼ WebSocket</div>
+<div class="sensor">📷 In-Sight 센서 (잡 = 스프레드시트)</div>
+
+<!-- ===================== 2. 흐름 ===================== -->
+<h2 id="flow" style="border-color:var(--l2)">② 데이터 흐름 — 3가지만 기억</h2>
+
+<div class="flow">
+  <h4>A. 검사 결과 받기 (평상시)</h4>
+  <div class="steps">
+    <div class="step s0">센서<small>검사 실행</small></div><div class="to">➜</div>
+    <div class="step s1">CvsInSight<small>ResultsChanged</small></div><div class="to">➜</div>
+    <div class="step s4">SensorSessionVM<small>결과 정리</small></div><div class="to">➜</div>
+    <div class="step s2">CvsDisplay / Spreadsheet<small>화면 표시</small></div>
+    <div class="to">+</div>
+    <div class="step s3">ResultCsvService<small>CSV 저장</small></div>
+  </div>
+  <div class="tip">💡 결과가 안 들어오면 → <code>ResultsChanged</code> 이벤트가 발생하는지부터 확인</div>
+</div>
+
+<div class="flow">
+  <h4>B. 파라미터 수정 (툴 설정 창)</h4>
+  <div class="steps">
+    <div class="step s4">사용자 입력<small>ToolSetup 창</small></div><div class="to">➜</div>
+    <div class="step s4">ToolSetupVM<small>값 변경</small></div><div class="to">➜</div>
+    <div class="step s3">CellExpression<small>수식 다시 조립</small></div><div class="to">➜</div>
+    <div class="step s1">SetCellExpression<small>/ SetCellValue</small></div><div class="to">➜</div>
+    <div class="step s0">센서<small>셀 변경</small></div>
+  </div>
+  <div class="tip">💡 모든 편집은 결국 <code>SetCellValue</code>(값) 또는 <code>SetCellExpression</code>(수식) 두 함수로 감 → 반영 안 되면 여기 breakpoint</div>
+</div>
+
+<div class="flow">
+  <h4>C. 잡 변경</h4>
+  <div class="steps">
+    <div class="step s0">잡 로드<small>LoadJob</small></div><div class="to">➜</div>
+    <div class="step s1">RefreshAfterJobLoadAsync<small>시트 다시 읽기</small></div><div class="to">➜</div>
+    <div class="step s1">JobReloaded<small>이벤트</small></div><div class="to">➜</div>
+    <div class="step s4">InSightBehavior<small>화면 리셋</small></div><div class="to">➜</div>
+    <div class="step s2">Spreadsheet/Display/스캔캐시<small>초기화</small></div>
+  </div>
+  <div class="tip">💡 잡 바꿨는데 옛 셀/그래픽이 남아있으면 → 이 흐름 중 끊긴 곳</div>
+</div>
+
+<!-- ===================== 3. ToolSetup ===================== -->
+<h2 id="toolsetup" style="border-color:var(--l4)">③ 툴 설정 창 — 어떻게 툴을 찾나</h2>
+<div class="flow">
+  <div class="steps">
+    <div class="step s3">Setup 표 D열<small>포인트별 블록 시작행</small></div><div class="to">➜</div>
+    <div class="step s3">판정 셀 (F/G)<small>여기서 출발</small></div><div class="to">➜</div>
+    <div class="step s3">참조 거꾸로 추적<small>JobToolScanner</small></div><div class="to">➜</div>
+    <div class="step s3">툴 셀 목록<small>"판정" 뱃지</small></div><div class="to">➜</div>
+    <div class="step s3">ToolCatalog<small>파라미터 이름/옵션</small></div><div class="to">➜</div>
+    <div class="step s4">화면에 표시<small>★ / 🔗 / 쉬운 이름</small></div>
+  </div>
+  <div class="tip">⚠ 규칙: 템플릿 위치는 <b>고정 행/열 금지</b>. 라벨 글자('Pos No', 'DATA MAP', 'SHARED PARAM' 등)로 찾음 → 템플릿 라벨 바꾸면 못 찾음</div>
+</div>
+<div class="chips">
+  <div class="chip"><b>탭: 툴 파라미터</b><span>ToolSetupViewModel</span></div>
+  <div class="chip"><b>탭: 오버레이/레이아웃</b><span>OverlayViewModel</span></div>
+  <div class="chip"><b>탭: 캘리브레이션 / 원점 / 데이터맵</b><span>AlignSetupViewModel + AlignTemplate</span></div>
+  <div class="chip"><b>ROI 드래그</b><span>RoiViewModel + RoiCanvas</span></div>
+</div>
+
+<!-- ===================== 4. 문제 대응 ===================== -->
+<h2 id="trouble" style="border-color:var(--sensor)">④ 문제 생기면 여기부터</h2>
+<div class="grid">
+  <div class="card" style="border-color:var(--l1)">
+    <div class="q">🔌 연결 안 됨 / 느림 / 끊김</div>
+    <ul><li><code>CvsInSight.Connect</code> — 단계별 시간 로그(ConnectTimings) 있음</li>
+        <li><code>SensorSessionViewModel.ConnectAsync</code></li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l1)">
+    <div class="q">📭 결과가 안 들어옴</div>
+    <ul><li><code>ResultsChanged</code> 발생 여부</li><li><code>GetLatestResult</code></li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l2)">
+    <div class="q">🖼 그래픽 위치/크기/글자 이상</div>
+    <ul><li><code>GraphicsHelper</code> (<code>DrawText</code>)</li>
+        <li>config.ini <code>[Display] GraphicsTextScale</code></li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l2)">
+    <div class="q">✏ 셀 편집 이상</div>
+    <ul><li><code>CvsSpreadsheet.Editor.cs</code></li><li>키 입력: <code>ProcessCmdKey</code></li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l3)">
+    <div class="q">🔍 툴 목록이 비었거나 틀림</div>
+    <ul><li><code>JobToolScanner</code> (참조 추적)</li><li>템플릿 D열 블록 시작행 확인</li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l3)">
+    <div class="q">📋 파라미터 이름/옵션 틀림</div>
+    <ul><li><code>Resources/ToolCatalog.json</code></li>
+        <li>손으로 고치지 말 것 → <code>Tools/ToolCatalogGen</code>으로 재생성</li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l3)">
+    <div class="q">🇰🇷 한글 설명/이름</div>
+    <ul><li><code>Resources/ToolDesc.ko.json</code> (상세)</li><li><code>Resources/ToolEasy.ko.json</code> (쉬운 이름)</li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l3)">
+    <div class="q">🎯 캘리브레이션/원점 셀 못 찾음</div>
+    <ul><li><code>AlignTemplate</code> (AlignLayout.Detect)</li><li>템플릿 라벨 글자 바뀌었는지</li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l4)">
+    <div class="q">♻ 잡 바꿨는데 옛 화면 남음</div>
+    <ul><li><code>RefreshAfterJobLoadAsync</code></li><li><code>InSightBehavior</code></li></ul>
+  </div>
+  <div class="card" style="border-color:var(--l3)">
+    <div class="q">⚙ 설정 저장 안 됨</div>
+    <ul><li><code>ConfigModel</code> + <code>ini.cs</code></li></ul>
+  </div>
+</div>
+
+<!-- ===================== 5. 주의 ===================== -->
+<h2 id="risk" style="border-color:#ef4444">⑤ 주의사항</h2>
+<div class="risk"><ul>
+  <li><b>커밋 안 된 작업 많음</b> — JobEditor, ToolSetup, Overlay 등 최근 작업 전부 미커밋. 날아가면 복구 불가.</li>
+  <li><b>빌드</b> — 실제는 net48 / C# 7.3. <code>dotnet build</code> 안 됨 → VS MSBuild 사용. (CLAUDE.md의 ".NET 8"은 틀림)</li>
+  <li><b>MVVM</b> — CommunityToolkit 아님. 자체 <code>RelayCommand</code> / <code>ViewModelBase</code>.</li>
+  <li><b>실센서 미검증</b> — 오버레이, 캘리브레이션, 원형 ROI, 버튼 누르기, 잡 리로드. 문제 시 1순위 의심.</li>
+  <li><b>테스트 코드 없음</b> — 수정 후 실기 확인 필수.</li>
+  <li><b>ToolSetupViewModel 비대</b> (1275줄) — 손볼 일 많아지면 탭별 분리 권장.</li>
+</ul></div>
+
+</div>
+</body>
+</html>

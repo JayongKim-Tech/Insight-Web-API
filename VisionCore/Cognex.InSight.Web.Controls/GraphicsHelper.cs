@@ -12,6 +12,12 @@ namespace Cognex.InSight.Web.Controls
   public abstract class GraphicsHelper
   {
     public static Font DefaultFont = new Font("Arial", 12);
+
+    /// <summary>PlotString 등 글자 그래픽 표시 배율 (화면 표시만, 호스트 앱 설정에서 지정)</summary>
+    public static float TextScale = 1f;
+
+    /// <summary>글자 그래픽 최소 크기 (pt) - 이미지를 많이 축소해도 읽을 수 있게</summary>
+    public static float MinTextSize = 6f;
     public static SolidBrush DefaultBrush = new SolidBrush(Color.Blue);
 
     public static void DrawGraphics(Graphics gr, CvsCogShape [] graphics, ICvsDisplayContext dc)
@@ -582,25 +588,24 @@ namespace Cognex.InSight.Web.Controls
       SolidBrush brush = new SolidBrush(Color.FromArgb(color));
 
       PointF loc = dc.SensorToClient(new PointF((float)text.X, (float)text.Y));
-      Font font = new Font((text.Font.Length > 0)?text.Font:"Arial", (text.FontSize > 0) ? text.FontSize : 9);
 
       string label = text.Text;
-      if (label.Length <= 0)
+      if (string.IsNullOrEmpty(label))
         return;
 
-      SizeF strSize = gr.MeasureString(label, font);
-
-      Size sz = new Size((int)(strSize.Width * dc.ImageScale), (int)(strSize.Height  * dc.ImageScale));
-      Font goodFont = FindFont(gr, label, sz, font);
-
-      if (bgColor != 0)
+      // 글자 크기를 이미지 배율에 맞춤 (In-Sight처럼 글자도 이미지의 일부로 확대/축소).
+      // 고정 크기로 그리면 화면마다 이미지 배율이 달라서 메인 디스플레이와 ToolSetup에서 글자/이미지 비율이 달라 보였음
+      // TextScale = 사용자가 조절하는 표시 배율 (ToolSetup 오버레이 탭), 너무 작아 안 읽히지 않게 최소 크기
+      float size = ((text.FontSize > 0) ? text.FontSize : 9) * (float)dc.ImageScale * TextScale;
+      using (Font font = new Font((text.Font != null && text.Font.Length > 0) ? text.Font : "Arial", Math.Max(MinTextSize, size)))
       {
-        SolidBrush bgBrush = new SolidBrush(Color.FromArgb(bgColor));
-        SizeF size = gr.MeasureString(label, (goodFont != null) ? goodFont : DefaultFont);
-        gr.FillRectangle(bgBrush, new RectangleF(new PointF(loc.X, loc.Y), size));
+        if (bgColor != 0)
+        {
+          using (SolidBrush bgBrush = new SolidBrush(Color.FromArgb(bgColor)))
+            gr.FillRectangle(bgBrush, new RectangleF(loc, gr.MeasureString(label, font)));
+        }
+        gr.DrawString(label, font, brush, (int)loc.X, (int)loc.Y);
       }
-
-      gr.DrawString(label, (goodFont != null) ? goodFont : DefaultFont, brush, (int)loc.X, (int)loc.Y);
     }
 
     public static void DrawPolygon(Graphics gr, CvsCogPolygon polygon, ICvsDisplayContext dc)

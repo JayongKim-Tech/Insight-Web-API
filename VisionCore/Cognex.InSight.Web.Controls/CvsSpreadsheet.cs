@@ -34,12 +34,8 @@ namespace Cognex.InSight.Web.Controls
       public Color Color;
     }
 
-    // 셀 식(expression) 인라인 편집 - 그리드 기본 편집 컨트롤을 그대로 사용해서 별도 창 없이 그리드 스타일 그대로 편집됨
+    // 셀 주소 자동완성 후보 (편집 UI는 CvsSpreadsheet.Editor.cs)
     private static readonly List<string> _allCellAddresses = BuildCellAddressList();
-    private string _editingExpressionLocation;
-    private TextBox _activeEditingTextBox;
-    private ToolStripDropDown _suggestDropDown;
-    private ListBox _suggestList;
 
     private static List<string> BuildCellAddressList()
     {
@@ -58,6 +54,7 @@ namespace Cognex.InSight.Web.Controls
     public CvsSpreadsheet()
     {
       InitializeComponent();
+      BuildEditorUi();
     }
 
     /// <summary>
@@ -68,6 +65,7 @@ namespace Cognex.InSight.Web.Controls
     {
       _isCustomView = isCustomView;
       InitializeComponent();
+      BuildEditorUi();
     }
 
     /// <summary>
@@ -106,9 +104,8 @@ namespace Cognex.InSight.Web.Controls
 
       gridView.EditingControlShowing += new DataGridViewEditingControlShowingEventHandler(gridView_EditingControlShowing);
 
-      // 셀 식 인라인 편집 커밋 처리 (중복 구독 방지를 위해 먼저 해제 후 구독)
-      gridView.CellEndEdit -= gridView_CellEndEdit;
-      gridView.CellEndEdit += gridView_CellEndEdit;
+      // 셀 편집 (수식 입력줄 / 셀 위 편집창 / 단축키) 이벤트
+      HookEditorEvents();
 
       // 연관 셀 화살표 (중복 구독 방지를 위해 먼저 해제 후 구독)
       gridView.SelectionChanged -= gridView_SelectionChanged;
@@ -117,12 +114,32 @@ namespace Cognex.InSight.Web.Controls
       gridView.Paint += gridView_Paint;
       gridView.Scroll -= gridView_Scroll;
       gridView.Scroll += gridView_Scroll;
+      gridView.CellPainting -= gridView_CellPainting;
+      gridView.CellPainting += gridView_CellPainting;
 
       // Display the current results, if any
       if (_inSight?.Results != null)
       {
         UpdateResults(_inSight.Results);
       }
+    }
+
+    /// <summary>
+    /// 새 잡 로드 후: 이전 잡의 셀(값/식 캐시/되돌리기/화살표)을 모두 버리고 새 시트 서식으로 그리드를 다시 만듦.
+    /// UpdateResults는 결과에 있는 셀만 갱신해서, 그리드를 다시 만들지 않으면 새 잡에서 빈 셀에 이전 잡 내용이 남음
+    /// </summary>
+    public void ResetForNewJob()
+    {
+      if (_inlineHost != null) { _inlineHost.Visible = false; _inlineLocation = null; }
+      HideSuggestions();
+      _expressionCache.Clear();
+      _undo.Clear();
+      _copySourceLocation = null;
+      _arrows.Clear();
+      _selectedCellLocation = null;
+      _exprDirty = false;
+      if (_exprBox != null) _exprBox.Text = "";
+      InitSpreadsheet();
     }
 
     public void SizeToContents()
@@ -206,21 +223,6 @@ namespace Cognex.InSight.Web.Controls
         combo.SelectedIndexChanged +=
             new EventHandler(ComboBox_SelectedIndexChanged);
       }
-
-      // 편집 컨트롤은 재사용되므로 매번 이전 핸들러를 먼저 떼어냄
-      if (_activeEditingTextBox != null)
-      {
-        _activeEditingTextBox.TextChanged -= EditingTextBox_TextChanged;
-        _activeEditingTextBox.KeyDown -= EditingTextBox_KeyDown;
-        _activeEditingTextBox = null;
-      }
-
-      if (_editingExpressionLocation != null && e.Control is TextBox textBox)
-      {
-        _activeEditingTextBox = textBox;
-        textBox.TextChanged += EditingTextBox_TextChanged;
-        textBox.KeyDown += EditingTextBox_KeyDown;
-      }
     }
 
     private void ComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -259,217 +261,6 @@ namespace Cognex.InSight.Web.Controls
       });
     }
     
-    private async void gridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
-    {
-      if (e.RowIndex < 0 || e.ColumnIndex <= 0)
-        return;
-
-      string cellLocation = string.Format("{0}{1}", (char)('A' + (e.ColumnIndex - 1)), e.RowIndex);
-
-      if (!_inSight.Connected || _inSight.Online || _inSight.EditorAttached || IsCustomView)
-        return;
-
-      // Only admins should be able to set an expression.
-      if (_inSight.AccessLevel.ToLower() != "full")
-        return;
-
-      try
-      {
-        // Get the current expression...
-        string value = await _inSight.GetCellExpression(cellLocation);
-
-        // 별도 창을 띄우지 않고, 이 셀을 그리드 기본 편집 컨트롤(DataGridViewTextBoxCell)로 바꿔치기해서
-        // 그리드 스타일 그대로 셀 안에서 바로 입력하도록 함. 편집이 끝나면(gridView_CellEndEdit) 다음
-        // 결과 갱신 때 원래 셀 타입으로 자동 복원됨.
-        var currentCell = gridView[e.ColumnIndex, e.RowIndex];
-        var editCell = new DataGridViewTextBoxCell();
-        SpreadsheetGridViewExtensions.CopyGridViewStyle(currentCell, editCell);
-        gridView[e.ColumnIndex, e.RowIndex] = editCell;
-        gridView[e.ColumnIndex, e.RowIndex].Value = value;
-
-        _editingExpressionLocation = cellLocation;
-        gridView.CurrentCell = gridView[e.ColumnIndex, e.RowIndex];
-        gridView.BeginEdit(true);
-      }
-      catch (Exception ex)
-      {
-        Debug.WriteLine("gridView_CellDoubleClick:" + ex.Message);
-        MessageBox.Show("Unable to set Expression.", "Error");
-      }
-    }
-
-    private async void gridView_CellEndEdit(object sender, DataGridViewCellEventArgs e)
-    {
-      if (_editingExpressionLocation == null || e.RowIndex < 0 || e.ColumnIndex <= 0)
-        return;
-
-      string cellLocation = string.Format("{0}{1}", (char)('A' + (e.ColumnIndex - 1)), e.RowIndex);
-      if (!string.Equals(cellLocation, _editingExpressionLocation, StringComparison.OrdinalIgnoreCase))
-        return;
-
-      _editingExpressionLocation = null;
-      HideSuggestions();
-
-      string newExpression = Convert.ToString(gridView[e.ColumnIndex, e.RowIndex].Value);
-
-      try
-      {
-        if (_inSight.Connected)
-        {
-          await _inSight.SetCellExpression(cellLocation, newExpression);
-          _expressionCache[cellLocation] = newExpression;
-          UpdateArrows(cellLocation);
-
-          // 결과가 새로 들어올 때까지 기다리지 않고 바로 갱신 (그리드에 변경값이 즉시 보이도록)
-          await _inSight.GetLatestResult();
-          if (_inSight.Results != null)
-            UpdateResults(_inSight.Results);
-        }
-      }
-      catch (Exception ex)
-      {
-        Debug.WriteLine("gridView_CellEndEdit:" + ex.Message);
-        MessageBox.Show("Unable to set Expression.", "Error");
-      }
-    }
-
-    #region 셀 주소 자동완성 (인라인 편집 중)
-
-    private void EditingTextBox_TextChanged(object sender, EventArgs e)
-    {
-      var textBox = sender as TextBox;
-      if (textBox == null)
-        return;
-
-      string token = GetToken(textBox.Text, textBox.SelectionStart, out int start, out int end);
-      if (string.IsNullOrEmpty(token) || !char.IsLetter(token[0]))
-      {
-        HideSuggestions();
-        return;
-      }
-
-      var matches = _allCellAddresses
-        .Where(c => c.StartsWith(token, StringComparison.OrdinalIgnoreCase))
-        .Take(30)
-        .ToList();
-
-      if (matches.Count == 0)
-      {
-        HideSuggestions();
-        return;
-      }
-
-      EnsureSuggestDropDown();
-      _suggestList.BeginUpdate();
-      _suggestList.Items.Clear();
-      _suggestList.Items.AddRange(matches.Cast<object>().ToArray());
-      _suggestList.EndUpdate();
-      _suggestList.SelectedIndex = 0;
-
-      if (!_suggestDropDown.Visible)
-      {
-        _suggestDropDown.Show(textBox, new Point(0, textBox.Height));
-        textBox.Focus(); // 드롭다운이 떠도 입력 포커스는 계속 텍스트박스에 유지
-      }
-    }
-
-    private void EditingTextBox_KeyDown(object sender, KeyEventArgs e)
-    {
-      if (_suggestDropDown == null || !_suggestDropDown.Visible)
-        return;
-
-      if (e.KeyCode == Keys.Down)
-      {
-        if (_suggestList.SelectedIndex < _suggestList.Items.Count - 1)
-          _suggestList.SelectedIndex++;
-        e.Handled = true;
-        e.SuppressKeyPress = true;
-      }
-      else if (e.KeyCode == Keys.Up)
-      {
-        if (_suggestList.SelectedIndex > 0)
-          _suggestList.SelectedIndex--;
-        e.Handled = true;
-        e.SuppressKeyPress = true;
-      }
-      else if (e.KeyCode == Keys.Tab)
-      {
-        AcceptSuggestion(sender as TextBox);
-        e.Handled = true;
-        e.SuppressKeyPress = true;
-      }
-      else if (e.KeyCode == Keys.Escape)
-      {
-        HideSuggestions();
-        e.Handled = true;
-      }
-      // Enter는 그대로 둬서 그리드가 평소처럼 셀 편집을 커밋하도록 함
-    }
-
-    private void EnsureSuggestDropDown()
-    {
-      if (_suggestDropDown != null)
-        return;
-
-      _suggestList = new ListBox
-      {
-        BorderStyle = BorderStyle.None,
-        IntegralHeight = false,
-        Size = new Size(140, 90)
-      };
-      _suggestList.MouseMove += (s, e) =>
-      {
-        int index = _suggestList.IndexFromPoint(e.Location);
-        if (index >= 0) _suggestList.SelectedIndex = index;
-      };
-      _suggestList.MouseUp += (s, e) => AcceptSuggestion(_activeEditingTextBox);
-
-      var host = new ToolStripControlHost(_suggestList)
-      {
-        Margin = Padding.Empty,
-        Padding = Padding.Empty,
-        AutoSize = false,
-        Size = _suggestList.Size
-      };
-
-      _suggestDropDown = new ToolStripDropDown { Padding = Padding.Empty, AutoClose = true };
-      _suggestDropDown.Items.Add(host);
-    }
-
-    private void HideSuggestions()
-    {
-      _suggestDropDown?.Close();
-    }
-
-    private void AcceptSuggestion(TextBox textBox)
-    {
-      if (textBox == null || _suggestList == null || _suggestList.SelectedItem == null)
-        return;
-
-      string selected = _suggestList.SelectedItem.ToString();
-      GetToken(textBox.Text, textBox.SelectionStart, out int start, out int end);
-
-      textBox.Text = textBox.Text.Substring(0, start) + selected + textBox.Text.Substring(end);
-      textBox.SelectionStart = start + selected.Length;
-
-      HideSuggestions();
-      textBox.Focus();
-    }
-
-    private static string GetToken(string text, int caret, out int start, out int end)
-    {
-      caret = Math.Min(caret, text.Length);
-
-      start = caret;
-      while (start > 0 && char.IsLetterOrDigit(text[start - 1])) start--;
-
-      end = caret;
-      while (end < text.Length && char.IsLetterOrDigit(text[end])) end++;
-
-      return text.Substring(start, end - start);
-    }
-
-    #endregion
 
     #region 선택한 셀 기준 연관 셀 화살표
 
@@ -477,6 +268,9 @@ namespace Cognex.InSight.Web.Controls
     {
       try
       {
+        // 선택 테두리는 Paint에서 그림 → 이전/새 선택 셀 모두 다시 그리기
+        gridView.Invalidate();
+
         if (_inSight == null || !_inSight.Connected || gridView.CurrentCell == null || IsCustomView)
         {
           ClearArrows();
@@ -493,6 +287,7 @@ namespace Cognex.InSight.Web.Controls
 
         string cellLocation = string.Format("{0}{1}", (char)('A' + colIndex), rowIndex);
         _selectedCellLocation = cellLocation;
+        ShowSelectedAddress(cellLocation);
 
         if (!_expressionCache.ContainsKey(cellLocation))
         {
@@ -511,6 +306,7 @@ namespace Cognex.InSight.Web.Controls
         if (_selectedCellLocation != cellLocation)
           return;
 
+        ShowSelectedExpression(cellLocation);
         UpdateArrows(cellLocation);
       }
       catch (Exception ex)
@@ -599,10 +395,48 @@ namespace Cognex.InSight.Web.Controls
       return true;
     }
 
+    private static readonly Color SelectionFill = Color.FromArgb(45, 0, 120, 215);
+    private static readonly Color SelectionBorder = Color.FromArgb(0, 100, 200);
+
+    /// <summary>
+    /// 가로 스크롤로 고정 열(행 번호) 밑에 반쯤 걸린 셀은 DataGridView 가 클립 없이 그려서 행 번호를 덮음.
+    /// 셀 종류/색과 무관하게 모든 셀을 "고정 열 오른쪽" 영역으로 잘라서 직접 그림.
+    /// </summary>
+    private void gridView_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+    {
+      if (e.ColumnIndex < 0 || gridView.Columns[e.ColumnIndex].Frozen)
+        return;
+
+      int frozenRight = (gridView.RowHeadersVisible ? gridView.RowHeadersWidth : 0)
+        + gridView.Columns.GetColumnsWidth(DataGridViewElementStates.Frozen | DataGridViewElementStates.Visible);
+      if (frozenRight <= 0 || e.CellBounds.Left >= frozenRight)
+        return;
+
+      Rectangle visible = Rectangle.FromLTRB(frozenRight, e.CellBounds.Top, Math.Max(frozenRight, e.CellBounds.Right), e.CellBounds.Bottom);
+      System.Drawing.Drawing2D.GraphicsState state = e.Graphics.Save();
+      try
+      {
+        e.Graphics.SetClip(visible, System.Drawing.Drawing2D.CombineMode.Intersect);
+        if (!visible.IsEmpty && visible.Width > 0)
+          e.Paint(visible, e.PaintParts);
+      }
+      finally
+      {
+        e.Graphics.Restore(state);
+      }
+      e.Handled = true;
+    }
+
     private void gridView_Paint(object sender, PaintEventArgs e)
     {
-      if (_arrows.Count == 0)
-        return;
+      // 고정된 행 번호 열 위로는 선택 테두리/화살표를 그리지 않음
+      if (gridView.Columns.Count > 0 && gridView.Columns[0].Visible)
+      {
+        int left = gridView.Columns[0].Width;
+        e.Graphics.SetClip(new Rectangle(left, 0, Math.Max(0, gridView.Width - left), gridView.Height), System.Drawing.Drawing2D.CombineMode.Intersect);
+      }
+
+      PaintCurrentCellFrame(e.Graphics);
 
       foreach (var arrow in _arrows)
       {
@@ -617,6 +451,25 @@ namespace Cognex.InSight.Web.Controls
           e.Graphics.DrawLine(pen, from, to);
         }
       }
+    }
+
+    /// <summary>
+    /// 선택 셀 표시 (Suite/Excel처럼 굵은 테두리 + 옅은 파란 바탕).
+    /// 결과 표시용 커스텀 셀(InSightTextCell 등)은 자체 Paint라 그리드 기본 선택색이 안 보여서 위에 덧그림
+    /// </summary>
+    private void PaintCurrentCellFrame(Graphics g)
+    {
+      if (IsCustomView || gridView.CurrentCell == null || gridView.CurrentCell.ColumnIndex < 1)
+        return;
+
+      Rectangle r = gridView.GetCellDisplayRectangle(gridView.CurrentCell.ColumnIndex, gridView.CurrentCell.RowIndex, true);
+      if (r.IsEmpty)
+        return;
+
+      using (var fill = new SolidBrush(SelectionFill))
+        g.FillRectangle(fill, r);
+      using (var pen = new Pen(SelectionBorder, 2f))
+        g.DrawRectangle(pen, r.X, r.Y, r.Width - 2, r.Height - 2);
     }
 
     #endregion

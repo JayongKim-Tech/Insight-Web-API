@@ -147,6 +147,9 @@
                         <Button Command="{Binding SaveJobCommand}" Style="{StaticResource TileIconBtnStyle}" ToolTip="Save Job">
                             <Image Source="/Resources/JobSave_32.png" Width="16"/>
                         </Button>
+                        <Button Command="{Binding ToolSetupCommand}" Style="{StaticResource TileIconBtnStyle}" ToolTip="Tool Setup (툴 파라미터 설정)">
+                            <Image Source="/Resources/Setup_32.png" Width="16"/>
+                        </Button>
 
                         <Rectangle Width="1" Fill="#444444" Margin="4,8"/>
 

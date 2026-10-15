@@ -41,6 +41,9 @@ namespace VisionCore.Views
                             await display.OnConnected();
                         };
 
+                        // 새 잡 로드 → 이전 잡 그래픽 지우고 새로 그림
+                        sensor.JobReloaded += (s, ev) => display.BeginInvoke((Action)(() => display.InitDisplay()));
+
                         display.InitDisplay();
                         _ = sensor.SendReady();
 
@@ -57,6 +60,10 @@ namespace VisionCore.Views
                     }
                     else if (host.Child is CvsSpreadsheet spreadsheet)
                     {
+                        // 셀 편집 자동완성/인자 힌트/함수 패널에 쓸 함수 목록 (도움말에서 만든 Catalog)
+                        if (CvsSpreadsheet.FunctionArgs.Count == 0)
+                            CvsSpreadsheet.FunctionArgs = VisionCore.Models.JobEditor.ToolCatalog.Default.GetFunctionArgs();
+
                         spreadsheet.SetInSight(sensor);
 
                         sensor.ConnectedChanged += (s, ev) =>
@@ -65,6 +72,13 @@ namespace VisionCore.Views
                             {
                                 spreadsheet.BeginInvoke((Action)(() => spreadsheet.InitSpreadsheet()));
                             }
+                        };
+
+                        // 새 잡 로드 → 그리드를 새 잡 기준으로 다시 만들고 (이전 셀/식 캐시 제거), ToolSetup 툴 검색 캐시도 무효화
+                        sensor.JobReloaded += (s, ev) =>
+                        {
+                            VisionCore.ViewModels.ToolSetupViewModel.ClearScanCache();
+                            spreadsheet.BeginInvoke((Action)(() => spreadsheet.ResetForNewJob()));
                         };
 
                         // InitSpreadsheet은 연결 시점에 한 번만 그려주고, 이후 새 결과가 와도

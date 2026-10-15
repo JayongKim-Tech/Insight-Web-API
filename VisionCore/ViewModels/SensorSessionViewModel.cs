@@ -61,8 +61,10 @@ namespace VisionCore.ViewModels
         public ICommand OpenJobCommand { get; }
         public ICommand SaveJobCommand { get; }
         public ICommand SaveAsJobCommand { get; }
+        public ICommand ToolSetupCommand { get; }
 
         private string _imgUri;
+        private Views.ToolSetupWindow _toolSetupWindow;
         private string _selectedJobPath;
 
         private bool _isConnected;
@@ -114,6 +116,32 @@ namespace VisionCore.ViewModels
             OpenJobCommand = new RelayCommand(o => ExcuteLoadJob());
             SaveJobCommand = new RelayCommand(async o => await ExcuteSaveJob());
             SaveAsJobCommand = new RelayCommand(async o => await ExecuteSaveAsJob());
+            ToolSetupCommand = new RelayCommand(o => ExecuteToolSetup());
+        }
+
+        /// <summary>
+        /// 툴 파라미터 설정 창 (센서당 1개 - 이미 열려 있으면 앞으로)
+        /// </summary>
+        private void ExecuteToolSetup()
+        {
+            if (!Sensor.Connected)
+            {
+                System.Windows.MessageBox.Show("센서가 연결되어 있지 않습니다.");
+                return;
+            }
+            if (_toolSetupWindow != null)
+            {
+                _toolSetupWindow.Activate();
+                return;
+            }
+
+            _toolSetupWindow = new Views.ToolSetupWindow
+            {
+                DataContext = new ToolSetupViewModel(Sensor, DisplayName, SaveCurrentJobAsync),
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            _toolSetupWindow.Closed += (s, e) => _toolSetupWindow = null;
+            _toolSetupWindow.Show();
         }
 
         public async Task<bool> ConnectAsync()
@@ -139,6 +167,7 @@ namespace VisionCore.ViewModels
                     Sensor.StateChanged += OnSensorStateChanged;
                     Sensor.EditorAttachedChanged += OnSensorStateChanged;
                     Logger.Success($"[{Device.DisplayName}] 센서 연결 성공!");
+                    Logger.Info($"[{Device.DisplayName}] 연결 소요 시간: {Sensor.ConnectTimings}");
                     return true;
                 }
                 return false;
@@ -292,20 +321,28 @@ namespace VisionCore.ViewModels
             }
         }
 
+        /// <summary>
+        /// 저장 = 센서에 지금 로드된 잡을 같은 이름으로 덮어씀 (센서는 재부팅 시 이 잡으로 시작하므로 센서 쪽이 원본).
+        /// 다른 이름으로 저장은 ExecuteSaveAsJob. 잡 이름을 못 얻으면 null.
+        /// </summary>
+        public async Task<string> SaveCurrentJobAsync()
+        {
+            string name = await Sensor.GetJobName();
+            if (string.IsNullOrWhiteSpace(name)) return null;
+
+            await Sensor.SaveJob(name);
+            Logger.Info($"[{Device.DisplayName}] 센서 잡 저장(덮어쓰기) 완료: {name}");
+            return name;
+        }
+
         private async Task ExcuteSaveJob()
         {
             if (!Sensor.Connected) return;
 
-            if (string.IsNullOrEmpty(_selectedJobPath))
-            {
-                await ExecuteSaveAsJob();
-                return;
-            }
-
             try
             {
-                await Sensor.SaveJob(_selectedJobPath);
-                Logger.Info($"[{Device.DisplayName}] 해당 경로에 Job 저장 완료: {_selectedJobPath}");
+                if (await SaveCurrentJobAsync() == null)
+                    await ExecuteSaveAsJob();
             }
             catch (Exception ex)
             {

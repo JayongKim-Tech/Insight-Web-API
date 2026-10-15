@@ -55,8 +55,12 @@ public class MainViewModel : ViewModelBase
     {
         if (string.IsNullOrEmpty(row.ImagePath)) return;
 
-        var session = Sensors.FirstOrDefault(s => s.DisplayName == row.Sensor);
-        if (session == null) return; // 해당 센서가 연결돼 있지 않음
+        var session = FindSessionForRow(row.Sensor);
+        if (session == null)
+        {
+            Logger.Warning($"결과의 센서 '{row.Sensor}' 가 연결돼 있지 않아 이미지를 표시할 수 없습니다.");
+            return;
+        }
 
         if (!System.IO.File.Exists(row.ImagePath))
         {
@@ -67,6 +71,29 @@ public class MainViewModel : ViewModelBase
         // 먼저 이미지를 바로 띄우고, OFFLINE이면 센서로 재검사해서 그래픽/판정까지 갱신 (ONLINE은 생산 검사 보호를 위해 이미지만)
         session.ShowImage?.Invoke(row.ImagePath);
         if (!session.IsOnline) session.Reinspect(row.ImagePath);
+    }
+
+    /// <summary>
+    /// 결과 행의 센서 이름 → 연결된 세션. 이름이 그대로 같으면 그 센서,
+    /// 아니면 포트를 뺀 주소가 같은 센서 (에뮬레이터는 실행할 때마다 포트가 바뀜),
+    /// 그래도 없고 센서가 1대뿐이면 그 센서.
+    /// </summary>
+    private SensorSessionViewModel FindSessionForRow(string sensorName)
+    {
+        var exact = Sensors.FirstOrDefault(s => s.DisplayName == sensorName);
+        if (exact != null) return exact;
+
+        string host = StripPort(sensorName);
+        var sameHost = Sensors.Where(s => StripPort(s.DisplayName) == host).ToList();
+        if (sameHost.Count == 1) return sameHost[0];
+
+        return Sensors.Count == 1 ? Sensors[0] : null;
+    }
+
+    private static string StripPort(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "";
+        return System.Text.RegularExpressions.Regex.Replace(name, @":\d+\s*$", "").Trim();
     }
 
     private async Task ScanDevices()

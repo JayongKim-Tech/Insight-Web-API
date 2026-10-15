@@ -170,6 +170,8 @@ namespace Cognex.InSight.Web.Controls
 
       // Set the fixed-width row header
       dgv.Columns[0].Width = dgv.Columns[0].Visible ? 30 : 0;
+      // 행 번호 열은 가로 스크롤해도 왼쪽에 고정
+      dgv.Columns[0].Frozen = dgv.Columns[0].Visible;
 
       // Determine which scroll bars should be displayed, if any
       if ((inSight != null) && inSight.Connected)
@@ -386,6 +388,27 @@ namespace Cognex.InSight.Web.Controls
 
           // Account for the column header
           int cellColIndex = colIndex + 1;
+
+          // 오류 셀: 빈칸 대신 In-Sight 처럼 빨간 #ERR
+          if (cell.Error)
+          {
+            if (!(dgv[cellColIndex, rowIndex] is InSightErrorCell))
+            {
+              var errCell = new InSightErrorCell { OriginalStyle = dgv[cellColIndex, rowIndex].Style.Clone() };
+              CopyGridViewStyle(dgv[cellColIndex, rowIndex], errCell);
+              errCell.Style.ForeColor = Color.Red;
+              dgv[cellColIndex, rowIndex] = errCell;
+            }
+            dgv[cellColIndex, rowIndex].Value = "#ERR";
+            continue;
+          }
+          if (dgv[cellColIndex, rowIndex] is InSightErrorCell oldErr)
+          {
+            // 오류가 풀리면 원래 스타일의 일반 셀로 되돌린 뒤 아래에서 종류별 셀로 교체
+            var plain = new DataGridViewTextBoxCell();
+            plain.Style = oldErr.OriginalStyle ?? new DataGridViewCellStyle();
+            dgv[cellColIndex, rowIndex] = plain;
+          }
 
           if ((cell is HmiFloatResult) || (cell is FloatResult))
           {
@@ -660,7 +683,14 @@ namespace Cognex.InSight.Web.Controls
             SerializationHelper.RemoveFields(token, nonEditableFields);
             string strValue = token.ToString();
             // Try to edit the shape...
-            if ((value is CvsCogRegion) || (value is CvsCogCircle) || (value is CvsCogLine) ||
+            object editable = CvsInSight.JsonSerializer.DeserializeObject(strValue);
+            if (ShapeEditorForm.IsSupported(editable))
+            {
+              // Suite처럼 이미지 위에서 마우스/방향키로 편집 (이미지·참고 그래픽은 창이 뜬 뒤 받아옴)
+              if (ShapeEditorForm.Edit(DataGridView, _inSight, _cellLocation, (CvsCogShape)editable))
+                await _inSight.SetCellValue(_cellLocation, editable);
+            }
+            else if ((value is CvsCogRegion) || (value is CvsCogCircle) || (value is CvsCogLine) ||
                 (value is CvsCogPoint) || (value is CvsCogAnnulus) || (value is CvsCogPolygon) ||
                 (value is CvsCogPolylinePath) || (value is CvsCogCompositeRegion) || (value is CvsCogMaskedRegion))
             {
@@ -868,6 +898,19 @@ namespace Cognex.InSight.Web.Controls
   }
 
   // Custom TextCell
+  /// <summary>오류(#ERR) 셀. 오류가 풀리면 OriginalStyle 로 되돌림</summary>
+  public class InSightErrorCell : InSightTextCell
+  {
+    public DataGridViewCellStyle OriginalStyle { get; set; }
+
+    public override object Clone()
+    {
+      var c = (InSightErrorCell)base.Clone();
+      c.OriginalStyle = OriginalStyle;
+      return c;
+    }
+  }
+
   public class InSightTextCell : DataGridViewCell
   {
     public InSightTextCell()
@@ -879,7 +922,7 @@ namespace Cognex.InSight.Web.Controls
       base.Paint(graphics, clipBounds, cellBounds, rowIndex, elementState, value, formattedValue, errorText, cellStyle, advancedBorderStyle, paintParts);
 
       Region saveClip = graphics.Clip;
-      graphics.SetClip(cellBounds);
+      graphics.SetClip(cellBounds, System.Drawing.Drawing2D.CombineMode.Intersect); // 고정된 행 번호 열 위로 덮어 그리지 않게
       graphics.FillRectangle(new SolidBrush(cellStyle.BackColor), cellBounds);
       PaintBorder(graphics, clipBounds, cellBounds, cellStyle, advancedBorderStyle);
 
@@ -905,7 +948,7 @@ namespace Cognex.InSight.Web.Controls
       base.Paint(graphics, clipBounds, cellBounds, rowIndex, elementState, value, formattedValue, errorText, cellStyle, advancedBorderStyle, paintParts);
 
       Region saveClip = graphics.Clip;
-      graphics.SetClip(cellBounds);
+      graphics.SetClip(cellBounds, System.Drawing.Drawing2D.CombineMode.Intersect); // 고정된 행 번호 열 위로 덮어 그리지 않게
       graphics.FillRectangle(new SolidBrush(cellStyle.BackColor), cellBounds);
       PaintBorder(graphics, clipBounds, cellBounds, cellStyle, advancedBorderStyle);
 
@@ -941,7 +984,7 @@ namespace Cognex.InSight.Web.Controls
       base.Paint(graphics, clipBounds, cellBounds, rowIndex, elementState, value, formattedValue, errorText, cellStyle, advancedBorderStyle, paintParts);
 
       Region saveClip = graphics.Clip;
-      graphics.SetClip(cellBounds);
+      graphics.SetClip(cellBounds, System.Drawing.Drawing2D.CombineMode.Intersect); // 고정된 행 번호 열 위로 덮어 그리지 않게
       graphics.FillRectangle(new SolidBrush(cellStyle.BackColor), cellBounds);
       DataGridViewAdvancedBorderStyle borderStyle = new DataGridViewAdvancedBorderStyle();
       borderStyle.All = DataGridViewAdvancedCellBorderStyle.Inset;
@@ -1138,7 +1181,7 @@ namespace Cognex.InSight.Web.Controls
       Rectangle rect = new Rectangle(cellBounds.X + 2, cellBounds.Y + 2, cellBounds.Height - 6, cellBounds.Height - 6);
 
       Region saveClip = graphics.Clip;
-      graphics.SetClip(cellBounds);
+      graphics.SetClip(cellBounds, System.Drawing.Drawing2D.CombineMode.Intersect); // 고정된 행 번호 열 위로 덮어 그리지 않게
       graphics.FillRectangle(new SolidBrush(cellStyle.BackColor), cellBounds);
       PaintBorder(graphics, clipBounds, cellBounds, cellStyle, advancedBorderStyle);
 
@@ -1185,7 +1228,7 @@ namespace Cognex.InSight.Web.Controls
       Rectangle rect = new Rectangle(cellBounds.X + 2, cellBounds.Y + 2, circleWidth, circleWidth);
 
       Region saveClip = graphics.Clip;
-      graphics.SetClip(cellBounds);
+      graphics.SetClip(cellBounds, System.Drawing.Drawing2D.CombineMode.Intersect); // 고정된 행 번호 열 위로 덮어 그리지 않게
       graphics.FillRectangle(new SolidBrush(cellStyle.BackColor), cellBounds);
       PaintBorder(graphics, clipBounds, cellBounds, cellStyle, advancedBorderStyle);
 
@@ -1256,7 +1299,7 @@ namespace Cognex.InSight.Web.Controls
       Rectangle rect = new Rectangle(cellBounds.X + 2, cellBounds.Y + 2, cellBounds.Height - 6, cellBounds.Height - 6);
 
       Region saveClip = graphics.Clip;
-      graphics.SetClip(cellBounds);
+      graphics.SetClip(cellBounds, System.Drawing.Drawing2D.CombineMode.Intersect); // 고정된 행 번호 열 위로 덮어 그리지 않게
       graphics.FillRectangle(new SolidBrush(cellStyle.BackColor), cellBounds);
       PaintBorder(graphics, clipBounds, cellBounds, cellStyle, advancedBorderStyle);
       graphics.DrawImageUnscaled(_bitmap, cellBounds);

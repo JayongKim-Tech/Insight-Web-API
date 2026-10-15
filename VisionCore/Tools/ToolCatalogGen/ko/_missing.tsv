@@ -1,0 +1,117 @@
+637	Annulus.Image	This argument must reference a spreadsheet cell that contains a valid Image data structure. By default, the cell referenced is cell A0 , containing the Image data structure returned by the AcquireImage function .
+638	Annulus.Fixture.X	The X-offset of the image.
+639	Annulus.Fixture.Y	The Y-offset of the image.
+640	Annulus.Fixture.Theta	Rotation from image X-axis.
+641	Annulus.Show	Specifies the display mode for the annulus graphic overlay on the image.
+642	BlobToBlob.Show	Specifies the display mode for the graphical overlays of the function on top of the image.
+643	BoundingRectangle.Show	Specifies the display mode for BoundingRectangle graphical overlays on top of the image.
+644	CalibrateImage.Image	This argument must reference a spreadsheet cell that contains a valid Image data structure. This parameter must reference a spreadsheet cell that contains an Image data structure. By default, this parameter references cell A0 , the cell containing the Image data structure returned by the AcquireImage function . This parameter can also reference other Image data structures, such as those returned by the Vision Tool Image Functions or Coordinate Transforms Functions .
+645	Circle.Fixture.X	The X-offset of the fixture.
+646	Circle.Fixture.Y	The Y-offset of the fixture.
+647	Circle.Fixture.Theta	Offset from fixture origin.
+648	Circle.Show	Selects the type of graphics to overlay on the image.
+649	CircleFromNPoints.Image	This argument must reference a spreadsheet cell that contains a valid Image data structure. By default, the cell referenced is cell A0 , containing the AcquireImage function .
+650	CircleFromNPoints.Show	Specifies the graphics items to be displayed on a permanent basis.
+651	Colorize.Fixture.X	The X-offset, in image coordinates.
+652	Colorize.Fixture.Y	The Y-offset, in image coordinates.
+653	Colorize.Fixture.Theta	The rotation from the image X-axis, in the image coordinate system. (+/-360 degrees clockwise)
+654	ComputeImageSharpness.Image	This parameter must use Cell References in a spreadsheet cell that contains an Image data structure. By default, this parameter references A0 , the cell containing the Image data structure returned by the AcquireImage function . This parameter can also reference other Image data structures, such as those returned by the Vision Tool Image Functions or Coordinate Transforms Functions .
+655	ComputeImageSharpness.Region.Curve	Angle between sides, +/- 360 degrees clockwise
+656	ComputeImageSharpness.Show	Specifies which graphical overlays are displayed on top of the image.
+657	Cross.Show	Specifies the display mode for the cross graphical overlay on the image.
+658	DetectBlobs.Image	This parameter must reference a spreadsheet cell that contains an Image data structure. By default, this parameter references cell A0 , containing the AcquireImage function . This parameter can also reference other Image data structures, such as those returned by the Image Vision Data Access functions or Coordinate Transforms Functions .
+659	DetectBlobs.Region.Width	The dimension along the X-axis of the region. The maximum value is 3244, or the largest value that is within the bounds of the input image starting from the X-offset.
+660	DetectBlobs.Region.Height	The dimension along the Y-axis of the region. The maximum value is 2500, or the largest value that is within the bounds of the input image starting from the Y offset.
+661	DetectBlobs.Number to Sort	Specifies the number of blobs to sort. Note : If the value of the Number to Sort parameter is greater than zero, DetectBlobs will automatically insert a result table containing a maximum of 10 entries that correspond to the first 10 blobs in the Blobs data structure. If you wish to display more entries, you can expand the table by copying the last row and pasting additional rows at the end; make sure to increment the index number of any newly-pasted row so that the proper blob is indexed.
+662	DetectBlobs.Threshold	Specifies the greyscale value that is used to separate blobs from the background. This value can be determined by utilizing the automatic setting (the default setting) of the DetectBlobs function, manually configured through trial and error, or set as Cell References to calculated results of the Histogram function.
+663	DetectBlobs.Fill Holes	Specifies one of two methods for processing statistics accumulated in holes.
+664	DetectBlobs.Boundary Blobs	Specifies one of two ways for managing blobs that intersect the ROI boundary.
+665	DetectBlobs.Color: Blob	Specifies the blob's color. Note : When Color: Blob and Color: Background are set to the same color, blobs are not reported. For example, when Color: Blob is set to black and Color: Background is also set to black , blobs are not reported. However, even if Color: Blob and Color: Background are set to the same color, blobs are reported when they are contained by an area of the opposite color (see the examples). If any part of the blob is not contained by the opposite color, the blob is not reported.
+666	DetectBlobs.Color: Background	Specifies the background color in the acquired image. 8-way connectivity analysis is performed on the foreground, and 4-way connectivity is performed on the background.
+667	DetectBlobs.Area Limit: Min	Specifies a minimum area restriction, in number of pixels, for all returned blobs (default = 100) . Only blobs whose area is greater than the Area Limit: Min value are returned. The parameter range is: Lower Limit: 0 Upper Limit: 100 000 000
+668	DetectBlobs.Area Limit: Max	Specifies a maximum area restriction, in number of pixels, for all returned blobs (default = 100000) . Only blobs whose area is less than the Area Limit: Max are returned. The parameter range is: Lower Limit: 0 Upper Limit: 100 000 000
+669	DetectBlobs.Show	Specifies the display mode for DetectBlobs graphical overlays on top of the image.
+670	EdgeAIAnomalyDetect.Image	Reference to a cell containing an Image structure. The default value is $A$0 .
+671	EdgeAIAnomalyDetect.Show	Select the type of graphic to overlay on the image.
+672	EdgeAISegment.Image	Reference to a cell containing an image structure. Default value: $A$0 .
+673	EditAnnulus.Image	This parameter uses Cell References to a spreadsheet cell that contains an Image data structure. This parameter must reference a spreadsheet cell that contains an Image data structure. By default, this parameter references cell A0 , the cell containing the Image data structure returned by the AcquireImage function . This parameter can also reference other Image data structures, such as those returned by the Vision Tool Image Functions or Coordinate Transforms Functions . This parameter can also reference other Image data structures, such as those returned by the Vision Tool Image functions or Coordinate Transforms Functions .
+674	EditAnnulus.Show	Specifies the display mode for the EditAnnulus graphics overlay on the image.
+675	EditCircle.Image	This parameter must reference a spreadsheet cell that contains an Image data structure. By default, this parameter references cell A0 , the cell containing the Image data structure returned by the AcquireImage function . This parameter can also reference other Image data structures, such as those returned by the Vision Tool Image Functions or Coordinate Transforms Functions .
+676	EditCircle.Show	Specifies the display mode for the EditCircle graphics overlay on the image.
+677	EditCompositeRegion.Show	Specifies the display mode for the EditCompositeRegion graphics overlay on the image.
+678	EditLine.Image	This argument must reference a spreadsheet cell that contains a valid Image data structure. By default, the cell references A0 , containing the Image data structure returned by the AcquireImage function .
+679	EditLine.Show	Specifies the display mode for the EditLine graphics overlay on the image.
+680	EditMaskedRegion.Show	Specifies the display mode for the EditMaskedRegion graphics overlay on the image.
+681	EditMultiGraphics.Image	This parameter must reference a spreadsheet cell that contains an Image data structure; by default, this parameter references A0, the cell containing the AcquireImage Image data structure. This parameter can also reference other Image data structures, such as those returned by the Vision Tool Image functions or Coordinate Transforms Functions. For more information, see Image or Coordinate Transforms Functions . Note : The EditMultiGraphics function must share the same Image reference as the Control functions it references. If one or more of the Control functions that the EditMultiGraphics function references do not share the same Image reference, the function returns #ERR.
+682	EditPoint.Show	Specifies the display mode for the EditPoint graphics overlay on the image.
+683	EditPolygon.Show	Specifies the display mode for the EditPolygon graphics overlay on the image.
+684	EditPolylinePath.Show	Specifies the display mode for the EditPolylinePath graphics overlay on the image.
+685	EditRegion.Fixture.X	Offset from image X origin.
+686	EditRegion.Fixture.Y	Offset from image Y origin.
+687	EditRegion.Show	Specifies the display mode for the EditRegion graphical overlay on top of the image.
+688	ExtractCalibration.Image	This argument must reference a spreadsheet cell that contains a valid Image data structure created by a ScaleImage or TransformImage function. When automatically inserted in conjunction with a TransformImage function, by default, the cell referenced is the cell containing the Image data structure returned by TransformImage. Otherwise, the cell referenced is cell A0 , the cell containing the Image data structure returned by the AcquireImage function .
+689	ExtractColorHistogram.Show	Specifies the display mode for ExtractColorHistogram graphical overlays on top of the image.
+690	ExtractHistogram.Show	Specifies the display mode for ExtractHistogram graphical overlays on top of the image.
+691	FindBlobs.Show	Specifies the display mode for FindBlobs graphical overlays on top of the image.
+692	FindCircle.Show	Specifies the display mode for FindCircle graphical overlays on top of the image.
+693	FindCircleMinMax.Show	Specifies the display mode for FindCircleMinMax graphical overlays on top of the image.
+694	FindCurve.Show	Specifies the display mode for FindCurve graphical overlays on top of the image.
+695	FindLine.Polarity	Specifies the polarity of the edge to be located, relative to the scan direction of the Edge Region. The function only reports edges of the specified polarity. Note : When using a horizontal or vertical linear edge feature as a fixture input, the function will only account for the movement of the edge in one direction, either along the horizontal or vertical axis, depending on the position of the scan direction of the ROI.
+696	FindLine.Show	Specifies the display mode for FindLine graphical overlays on top of the image.
+697	FindMultiLine.Show	Specifies the display mode for FindMultiLine graphical overlays on top of the image.
+698	FindPatMaxRedLine.Show	Specifies the display mode for graphical overlays on top of the image.
+699	FindSegment.Show	Specifies the display mode for FindSegment graphical overlays on top of the image.
+700	Fixture.Fixture.X	The X-offset.
+701	Fixture.Fixture.Y	The Y-offset.
+702	Fixture.Show	Specifies the display mode for the Fixture point graphical overlay on the image.
+703	InspectEdge.Show	Specifies the display mode for InspectEdge graphical overlays on top of the image.
+704	InspectEdgePosition.Show	Specifies the display mode for InspectEdgePosition graphical overlays on top of the image.
+705	InspectEdgeWidth.Show	Specifies the display mode for InspectEdgeWidth graphical overlays on top of the image.
+706	LatchImage.Fixture.X	Specifies the X-offset, in image coordinates.
+707	LatchImage.Fixture.Y	Specifies the Y-offset, in image coordinates.
+708	LatchImage.Fixture.Theta	Specifies the orientation, in image coordinates.
+709	LatchImage.Region.X	Specifies the X-offset of the origin, in fixture coordinates.
+710	LatchImage.Region.Y	Specifies the Y-offset of the origin, in fixture coordinates.
+711	LatchImage.Region.Width	Specifies the dimension along the X-axis of the region.
+712	LatchImage.Region.Height	Specifies the dimension along the Y-axis of the region.
+713	LatchImage.Region.Angle	Specifies the orientation, in fixture coordinates.
+714	Line.Fixture.X	The X-offset from the image.
+715	Line.Fixture.Y	The Y-offset from the image.
+716	Line.Show	Specifies the display mode for the Line graphic overlay on the image.
+717	OneVision.Image	This parameter must reference a Spreadsheet cell that contains an Image data structure. By default, this parameter references cell A0, containing the AcquireImage function. This parameter can also reference other Image data structures, such as those returned by the Image Vision Data Access functions or Coordinate Transforms Functions.
+718	OneVision.Fixture.Y	The Y offset, in image coordinates.
+719	PairEdges.Show	Specifies the display mode for PairEdges graphical overlays on top of the image.
+720	PairsToEdges.Show	Specifies the display mode for PairsToEdges graphical overlays on top of the image.
+721	PlotArc.Show	Specifies the display mode for the graphic overlay on the image.
+722	PlotCircle.Image	Reference to a cell containing an Image structure. Default = $A$0.
+723	PlotRegion.Region.X	The X coordinate of the origin of the region.
+724	PlotRegion.Region.Y	The Y coordinate of the origin of the region.
+725	PlotRegion.Region.Width	The region width.
+726	PlotRegion.Region.Height	The region height.
+727	PlotRegion.Region.Angle	The region orientation.
+728	PlotRegion.Region.Curve	The region curvature.
+729	Point.Show	Specifies the display mode for the Point overlay graphic on the image.
+730	Region.Fixture.X	The row offset.
+731	Region.Fixture.Y	The column offset.
+732	Region.Fixture.Theta	The orientation.
+733	Region.Region.Curve	The angular deviation between the X-axis of the region and the opposing boundary line.
+734	Region.Show	Specifies the display mode for the Region graphic overlay on the image.
+735	SortBlobs.Show	Specifies the display mode for SortBlobs graphical overlays on top of the image.
+736	SortEdges.Show	Specifies the display mode for SortEdges graphical overlays on top of the image.
+737	SortPatterns.Show	Specifies the display mode for SortPatterns graphics on the image.
+738	TrainPatMaxRedLine.Show	Specifies the display mode for TrainPatMaxRedLine graphics on the image.
+739	TransEdgesToFixture.Fixture.X	Offset from image X-origin.
+740	TransFixtureToPixel.Show	Specifies the display mode for the TransFixtureToPixel graphic overlay on the image.
+741	TransFixtureToWorld.Show	Specifies the display mode for the TransPixelToWorld graphic overlay on the image.
+742	TransformImage.Region.X	The X-offset of the origin, in fixture coordinates..
+743	TransformImage.Show	Specifies the display mode for TransformImage graphics on the image.
+744	TransPixelToFixture.Show	Specifies the display mode for the TransPixelToFixture graphic overlay on the image.
+745	TransWorldToPixel.Show	Specifies the display mode for the TransWorldToPixel graphic overlay on the image.
+746	WhiteBalance.Image	Specifies the color image reference. This argument must reference a valid Image data structure output of the function. By default, the cell referenced is A0, the cell containing the Image data structure returned by . Note : This parameter must reference a color image.
+747	WhiteBalance.Fixture.X	The row offset, in image coordinates.
+748	WhiteBalance.Fixture.Y	The column offset, in image coordinates.
+749	WhiteBalance.Fixture.Theta	The angle of orientation, in the image coordinate system.
+750	WhiteBalance.Region.Width	The dimension along the region's X-axis.
+751	WhiteBalance.Region.Height	The dimension along the region's Y-axis.
+752	WhiteBalance.Show	Specifies the display mode for the function on top of the image.
+753	WriteImage.Image	Specifies a reference to a cell containing an Image data structure. The default reference is to the Image data structure in cell A0 .

@@ -688,6 +688,9 @@ namespace Cognex.InSight.Web
     /// This may be null to designate that all cells should be returned.
     /// </param>
     /// <returns></returns>
+    /// <summary>마지막 Connect의 단계별 소요 시간 (예: "socket 120ms, info 30ms, ...")</summary>
+    public string ConnectTimings { get; private set; }
+
     public async Task Connect(string address, string username, string password, HmiSessionInfo sessionInfo)
     {
       if (_isConnected)
@@ -706,6 +709,11 @@ namespace Cognex.InSight.Web
       _password = password;
       _connectionString = "ws://" + _ipAddress + "/ws";
 
+      // 연결 단계별 소요 시간 (느린 구간 확인용) - ConnectTimings 로 노출
+      var connectWatch = Stopwatch.StartNew();
+      var timings = new List<string>();
+      Action<string> mark = stage => { timings.Add(stage + " " + connectWatch.ElapsedMilliseconds + "ms"); connectWatch.Restart(); };
+
       try
       {
         try
@@ -713,6 +721,7 @@ namespace Cognex.InSight.Web
           _cogSocket = new CogSocket(_connectionString, _sJsonSerializer.Settings);
           _cogSocket.Closed += _cogSocket_Closed;
           await _cogSocket.Connect().ConfigureAwait(false);
+          mark("socket");
         }
         catch (Exception ex)
         {
@@ -757,6 +766,7 @@ namespace Cognex.InSight.Web
 
         string[] capabilities = _cvsCameraInfo.Capabilities;
         _usesXYCoordinates = Array.Find<string>(capabilities, element => element == "xyCoordinates") != null;
+        mark("info");
 
         // Get the job info (Not the cells, but the other information stored with the job)
         await RequestJobInfo();
@@ -778,6 +788,7 @@ namespace Cognex.InSight.Web
         _isDiscreteOnline = Convert.ToBoolean(stateObj["discreteOnline"]);
         _isFfpOnline = Convert.ToBoolean(stateObj["ffpOnline"]);
         _isLiveMode = Convert.ToBoolean(stateObj["liveMode"]);
+        mark("jobInfo/settings/state");
 
         // Open a session
         object[] args1 = { sessionInfo };
@@ -806,6 +817,7 @@ namespace Cognex.InSight.Web
         await _cogSocket.AddListenerAsync(_rootPath + _editorAttachedChangedPath, new CogSocketEventHandler(HandleEditorAttachedChanged)).ConfigureAwait(false);
         await _cogSocket.AddListenerAsync(_rootPath + _sessionDisposedPath, new CogSocketEventHandler(HandleSessionDisposed)).ConfigureAwait(false);
         await _cogSocket.AddListenerAsync(_sessionIDPath + _resultChangedPath, new CogSocketEventHandler(HandleResultsChanged)).ConfigureAwait(false);
+        mark("session/listeners");
 
         // Login
         object[] args = { username, password, false, false };
@@ -822,6 +834,7 @@ namespace Cognex.InSight.Web
         }
 
         _accessLevel = accessLevel; // Save the level for the getter
+        mark("login/ready");
 
         try
         {
@@ -832,6 +845,8 @@ namespace Cognex.InSight.Web
           Debug.WriteLine("Warning: Unable to read sheet format. Setting to null.");
           _sheetFormat = new HmiSheetFormat();
         }
+        mark("sheetFormat");
+        ConnectTimings = string.Join(", ", timings);
 
         _keepAliveTimer.Interval = _keepAliveInterval;
         _keepAliveTimer.Elapsed += _keepAliveTimer_Elapsed;
@@ -1048,6 +1063,8 @@ namespace Cognex.InSight.Web
 
             string finalUrl = RemoteIPAddressUrl + _httpRequestRoot + _sessionIDPath + _loadImagePath;
             await _cogSocket.PostAsync(_sessionIDPath + _loadJobPath, args).ConfigureAwait(false);
+            // 로드 완료 알림(jobLoadingChanged)이 안 오는 펌웨어 대비 - 화면 갱신 (중복 호출은 1번으로 합쳐짐)
+            _ = RefreshAfterJobLoadAsync();
     }
 
     /// <summary>
@@ -1074,6 +1091,7 @@ namespace Cognex.InSight.Web
       {
         await MakeHttpPostRequest(url, timeout, "application/json", byteStream).ConfigureAwait(false);
       }
+      _ = RefreshAfterJobLoadAsync();
     }
 
     /// <summary>
@@ -1420,10 +1438,45 @@ namespace Cognex.InSight.Web
         {
           JobLoadingChanged(this, EventArgs.Empty); // Propagate the event
         }
+
+        // 로드가 끝나면 새 잡의 시트 서식/결과로 화면을 다시 구성하도록 알림
+        if (!_jobLoading)
+          _ = RefreshAfterJobLoadAsync();
       }
       catch (Exception ex)
       {
         Debug.WriteLine($"HandleJobLoadingChanged: {ex.Message}");
+      }
+    }
+
+    /// <summary>
+    /// 새 잡이 로드된 뒤 (JobLoadingChanged 끝 / LoadJob 호출 후): 시트 서식(열 너비·셀 색) + 최신 결과를 다시 읽음.
+    /// 화면 쪽(스프레드시트/디스플레이)은 이 이벤트에서 그리드를 새로 만들어야 이전 잡의 셀이 남지 않음.
+    /// </summary>
+    public event EventHandler JobReloaded;
+
+    private int _jobRefreshVersion;
+
+    public async Task RefreshAfterJobLoadAsync()
+    {
+      int version = System.Threading.Interlocked.Increment(ref _jobRefreshVersion);
+      try
+      {
+        await Task.Delay(300).ConfigureAwait(false);   // 로드 완료 알림이 연달아 와도 1번만
+        if (version != _jobRefreshVersion || !_isConnected) return;
+
+        try { _sheetFormat = (await RequestSheetFormat("A0:Z599").ConfigureAwait(false)).ToObject<HmiSheetFormat>(); }
+        catch (Exception ex) { Debug.WriteLine("RefreshAfterJobLoad sheetFormat: " + ex.Message); _sheetFormat = new HmiSheetFormat(); }
+        try { await RequestJobInfo().ConfigureAwait(false); } catch (Exception ex) { Debug.WriteLine("RefreshAfterJobLoad jobInfo: " + ex.Message); }
+
+        JobReloaded?.Invoke(this, EventArgs.Empty);
+
+        // 새 잡의 결과 → ResultsChanged 로 그리드/디스플레이 채움
+        await GetLatestResult().ConfigureAwait(false);
+      }
+      catch (Exception ex)
+      {
+        Debug.WriteLine($"RefreshAfterJobLoadAsync: {ex.Message}");
       }
     }
 
