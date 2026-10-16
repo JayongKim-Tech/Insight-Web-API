@@ -87,17 +87,16 @@ namespace VisionCore.Models
         {
             if (item == null) return;
 
-            var headers = new List<string> { TimeHeader, SensorHeader, PointHeader, ResultHeader };
-            var values = new List<string> { item.Timestamp.ToString("HH:mm:ss.fff"), item.SensorName, item.PointName, item.Result };
+            // 핵심 컬럼(ImagePath 포함)을 앞에 고정하고 커스텀필드는 맨 뒤에 둠.
+            // 그래야 커스텀필드를 추가/삭제해도 ImagePath 위치가 안 밀려 같은 파일을 다시 읽어도 경로가 맞음
+            var headers = new List<string> { TimeHeader, SensorHeader, PointHeader, ResultHeader, ImagePathHeader };
+            var values = new List<string> { item.Timestamp.ToString("HH:mm:ss.fff"), item.SensorName, item.PointName, item.Result, item.ImagePath ?? "" };
 
             foreach (var cv in item.CustomValues)
             {
                 headers.Add(cv.Name);
                 values.Add(cv.Value);
             }
-
-            headers.Add(ImagePathHeader);
-            values.Add(item.ImagePath ?? "");
 
             var line = new PendingLine { Path = GetFilePath(item.Timestamp), Headers = headers.ToArray(), Values = values.ToArray() };
 

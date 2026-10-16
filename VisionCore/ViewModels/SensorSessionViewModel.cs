@@ -23,7 +23,9 @@ namespace VisionCore.ViewModels
 
         public CvsInSight Sensor { get; } = new CvsInSight();
         public DiscoveredDevice Device { get; }
-        public string DisplayName => Device?.DisplayName;
+        // 연결 후 센서에 설정된 이름(Suite에서 변경 가능)으로 표시. 이름을 못 얻으면 스캔 때의 IP:Port 표시
+        private string _sensorName;
+        public string DisplayName => string.IsNullOrWhiteSpace(_sensorName) ? Device?.DisplayName : _sensorName;
 
         public ConfigModel Settings => ConfigModel.Instance;
         public DisplayViewModel DisplayVM { get; } = new DisplayViewModel();
@@ -148,7 +150,7 @@ namespace VisionCore.ViewModels
         {
             try
             {
-                Logger.Info($"[{Device.DisplayName}] 센서 연결 시도 중...");
+                Logger.Info($"[{DisplayName}] 센서 연결 시도 중...");
 
                 var sessionInfo = new HmiSessionInfo
                 {
@@ -160,21 +162,28 @@ namespace VisionCore.ViewModels
 
                 if (Sensor.Connected)
                 {
+                    // 에뮬레이터는 info의 name이 항상 "localhost" -> Suite처럼 PC 이름으로 표시
+                    _sensorName = Sensor.CameraInfo?.HostName?.Trim();
+                    if (string.IsNullOrEmpty(_sensorName) || _sensorName.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+                        _sensorName = Device.IsEmulator ? $"{Environment.MachineName} (Emulator)" : null;
+                    OnPropertyChanged(nameof(DisplayName));
                     IsConnected = true;
                     IsOnline = Sensor.Online;
                     IsEditorAttached = Sensor.EditorAttached;
                     Sensor.ResultsChanged += OnSensorResultsChanged;
                     Sensor.StateChanged += OnSensorStateChanged;
                     Sensor.EditorAttachedChanged += OnSensorStateChanged;
-                    Logger.Success($"[{Device.DisplayName}] 센서 연결 성공!");
-                    Logger.Info($"[{Device.DisplayName}] 연결 소요 시간: {Sensor.ConnectTimings}");
+                    Sensor.ConnectedChanged -= OnSensorConnectedChanged;
+                    Sensor.ConnectedChanged += OnSensorConnectedChanged;
+                    Logger.Success($"[{DisplayName}] 센서 연결 성공!");
+                    Logger.Info($"[{DisplayName}] 연결 소요 시간: {Sensor.ConnectTimings}");
                     return true;
                 }
                 return false;
             }
             catch (Exception ex)
             {
-                Logger.Error($"[{Device.DisplayName}] 연결 실패: {ex.Message}");
+                Logger.Error($"[{DisplayName}] 연결 실패: {ex.Message}");
                 System.Windows.MessageBox.Show($"연결 실패: {ex.Message}");
                 return false;
             }
@@ -182,30 +191,60 @@ namespace VisionCore.ViewModels
 
         public async Task DisconnectAsync()
         {
+            UnsubscribeSensorEvents();
             if (Sensor.Connected)
             {
-                Sensor.ResultsChanged -= OnSensorResultsChanged;
-                Sensor.StateChanged -= OnSensorStateChanged;
-                Sensor.EditorAttachedChanged -= OnSensorStateChanged;
                 await Sensor.Disconnect();
-                IsConnected = false;
-                Logger.Info($"[{Device.DisplayName}] 센서 연결 해제 완료.");
+                Logger.Info($"[{DisplayName}] 센서 연결 해제 완료.");
             }
+            IsConnected = false;
+        }
+
+        private void UnsubscribeSensorEvents()
+        {
+            Sensor.ResultsChanged -= OnSensorResultsChanged;
+            Sensor.StateChanged -= OnSensorStateChanged;
+            Sensor.EditorAttachedChanged -= OnSensorStateChanged;
+            Sensor.ConnectedChanged -= OnSensorConnectedChanged;
+        }
+
+        // 센서/에뮬레이터 쪽에서 먼저 끊긴 경우 (소켓 Closed -> SDK가 자체 Disconnect 후 ConnectedChanged 발생)
+        private void OnSensorConnectedChanged(object sender, EventArgs e)
+        {
+            if (Sensor.Connected) return;
+
+            UnsubscribeSensorEvents();
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                IsConnected = false;
+                _isOnline = false;
+                OnPropertyChanged(nameof(IsOnline));
+                Logger.Warning($"[{DisplayName}] 센서 쪽에서 연결이 끊어졌습니다.");
+            }));
         }
 
         private async void ChangeOnlineStateAsync(bool targetValue)
         {
             if (!Sensor.Connected)
             {
-                Logger.Warning($"[{Device.DisplayName}] 연결된 센서가 없어 상태를 변경할 수 없습니다.");
+                Logger.Warning($"[{DisplayName}] 연결된 센서가 없어 상태를 변경할 수 없습니다.");
                 _isOnline = !targetValue;
                 OnPropertyChanged(nameof(IsOnline));
                 return;
             }
 
-            if (Sensor.EditorAttached)
+            // 편집기 종료 이벤트를 놓치면 이전 값이 남음 -> 막기 전에 센서에 다시 확인
+            bool editorAttached = Sensor.EditorAttached;
+            if (editorAttached)
             {
-                Logger.Warning($"[{Device.DisplayName}] In-Sight 스프레드시트(편집기)가 연결돼 있어 센서가 ONLINE/OFFLINE 변경을 막고 있습니다. 편집기를 닫은 뒤 다시 시도하세요.");
+                try { editorAttached = await Sensor.RefreshEditorAttachedAsync(); }
+                catch (Exception ex) { Logger.Warning($"[{DisplayName}] 편집기 연결 상태 확인 실패: {ex.GetBaseException().Message.Trim()}"); }
+                IsEditorAttached = editorAttached;
+            }
+
+            if (editorAttached)
+            {
+                Logger.Warning($"[{DisplayName}] In-Sight 스프레드시트(편집기)가 연결돼 있어 센서가 ONLINE/OFFLINE 변경을 막고 있습니다. 편집기를 닫은 뒤 다시 시도하세요.");
                 _isOnline = !targetValue;
                 OnPropertyChanged(nameof(IsOnline));
                 return;
@@ -214,11 +253,11 @@ namespace VisionCore.ViewModels
             try
             {
                 await Sensor.SetSoftOnlineAsync(targetValue);
-                Logger.Success($"[{Device.DisplayName}] 센서 상태: [{(targetValue ? "ONLINE" : "OFFLINE")}]");
+                Logger.Success($"[{DisplayName}] 센서 상태: [{(targetValue ? "ONLINE" : "OFFLINE")}]");
             }
             catch (Exception ex)
             {
-                Logger.Warning($"[{Device.DisplayName}] 상태 변경 실패: {ex.GetBaseException().Message.Trim()}");
+                Logger.Warning($"[{DisplayName}] 상태 변경 실패: {ex.GetBaseException().Message.Trim()}");
                 _isOnline = !targetValue;
                 OnPropertyChanged(nameof(IsOnline));
             }
@@ -248,17 +287,17 @@ namespace VisionCore.ViewModels
 
                 if (isLive)
                 {
-                    Logger.Info($"[{Device.DisplayName}] Live Mode ON");
+                    Logger.Info($"[{DisplayName}] Live Mode ON");
                 }
                 else
                 {
                     await Sensor.SendReady();
-                    Logger.Info($"[{Device.DisplayName}] Live Mode OFF");
+                    Logger.Info($"[{DisplayName}] Live Mode OFF");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"[{Device.DisplayName}] Live 모드 전환 실패: {ex}");
+                Logger.Error($"[{DisplayName}] Live 모드 전환 실패: {ex}");
             }
         }
 
@@ -270,7 +309,7 @@ namespace VisionCore.ViewModels
             }
             catch (Exception ex)
             {
-                Logger.Error($"[{Device.DisplayName}] Trigger 실패: {ex.Message}");
+                Logger.Error($"[{DisplayName}] Trigger 실패: {ex.Message}");
             }
         }
 
@@ -287,7 +326,7 @@ namespace VisionCore.ViewModels
                 if (dlg.ShowDialog() == DialogResult.OK)
                 {
                     _selectedJobPath = dlg.FileName;
-                    Logger.Info($"[{Device.DisplayName}] 선택된 파일: {_selectedJobPath}");
+                    Logger.Info($"[{DisplayName}] 선택된 파일: {_selectedJobPath}");
 
                     try
                     {
@@ -295,7 +334,7 @@ namespace VisionCore.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error($"[{Device.DisplayName}] Job 로드 중 예외 발생: {ex.Message}");
+                        Logger.Error($"[{DisplayName}] Job 로드 중 예외 발생: {ex.Message}");
                     }
                 }
             }
@@ -316,7 +355,7 @@ namespace VisionCore.ViewModels
                 {
                     _selectedJobPath = dlg.FileName;
                     await Sensor.SaveJob(_selectedJobPath);
-                    Logger.Info($"[{Device.DisplayName}] 해당 경로에 Job 저장 완료: {_selectedJobPath}");
+                    Logger.Info($"[{DisplayName}] 해당 경로에 Job 저장 완료: {_selectedJobPath}");
                 }
             }
         }
@@ -331,7 +370,7 @@ namespace VisionCore.ViewModels
             if (string.IsNullOrWhiteSpace(name)) return null;
 
             await Sensor.SaveJob(name);
-            Logger.Info($"[{Device.DisplayName}] 센서 잡 저장(덮어쓰기) 완료: {name}");
+            Logger.Info($"[{DisplayName}] 센서 잡 저장(덮어쓰기) 완료: {name}");
             return name;
         }
 
@@ -346,7 +385,7 @@ namespace VisionCore.ViewModels
             }
             catch (Exception ex)
             {
-                Logger.Error($"[{Device.DisplayName}] Job Save 실패: {ex}");
+                Logger.Error($"[{DisplayName}] Job Save 실패: {ex}");
             }
         }
 
@@ -401,7 +440,7 @@ namespace VisionCore.ViewModels
             }
             catch (Exception ex)
             {
-                Logger.Error($"[{Device.DisplayName}] {ex}");
+                Logger.Error($"[{DisplayName}] {ex}");
             }
         }
 
@@ -439,7 +478,7 @@ namespace VisionCore.ViewModels
                     try
                     {
                         byte[] bmp = await Task.Run(() => ToBmpBytes(File.ReadAllBytes(path)));
-                        await Sensor.LoadImage(bmp);
+                        await Sensor.LoadImage(bmp, Path.GetFileName(path));
                     }
                     catch (Exception ex)
                     {
@@ -448,7 +487,7 @@ namespace VisionCore.ViewModels
                         {
                             _reinspectUnsupported = true;
                             _pendingReinspectPath = null;
-                            Logger.Info($"[{DisplayName}] 이 센서는 이미지 재검사를 지원하지 않아 저장된 이미지만 표시합니다.");
+                            Logger.Info($"[{DisplayName}] 이 센서는 이미지 재검사를 지원하지 않아 저장된 이미지만 표시합니다. ({ex.GetBaseException().Message.Trim()})");
                         }
                         else if (!_reinspectErrorLogged)
                         {

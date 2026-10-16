@@ -80,12 +80,20 @@ public class MainViewModel : ViewModelBase
     /// </summary>
     private SensorSessionViewModel FindSessionForRow(string sensorName)
     {
-        var exact = Sensors.FirstOrDefault(s => s.DisplayName == sensorName);
+        // 센서 이름 표시 이전에 기록된 행은 "[Emulator] 127.0.0.1:port" 같은 스캔 이름 -> Device.DisplayName 으로도 비교
+        var exact = Sensors.FirstOrDefault(s => s.DisplayName == sensorName || s.Device.DisplayName == sensorName);
         if (exact != null) return exact;
 
         string host = StripPort(sensorName);
-        var sameHost = Sensors.Where(s => StripPort(s.DisplayName) == host).ToList();
+        var sameHost = Sensors.Where(s => StripPort(s.DisplayName) == host || StripPort(s.Device.DisplayName) == host).ToList();
         if (sameHost.Count == 1) return sameHost[0];
+
+        // 에뮬레이터 info 이름("localhost")으로 기록된 행 -> 에뮬레이터 세션이 1대면 그 센서
+        if (string.Equals(sensorName, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            var emulators = Sensors.Where(s => s.Device.IsEmulator).ToList();
+            if (emulators.Count == 1) return emulators[0];
+        }
 
         return Sensors.Count == 1 ? Sensors[0] : null;
     }

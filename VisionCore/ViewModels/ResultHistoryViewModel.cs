@@ -113,7 +113,51 @@ namespace VisionCore.ViewModels
 
             _selectedDate = DateTime.Today;
             _csv.RowLogged += OnRowLogged;
+            ConfigModel.Instance.ConfigChanged += OnConfigChanged;
             LoadDate(_selectedDate);
+        }
+
+        // 설정에서 커스텀필드를 추가/삭제하면 오늘 리스트의 컬럼을 즉시 다시 잡음 (새 결과를 기다리지 않음)
+        private void OnConfigChanged(object sender, EventArgs e)
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_selectedDate != DateTime.Today) return; // 과거 날짜(읽기 전용)는 파일 그대로 둠
+                RebuildHeadersFromConfig();
+            }));
+        }
+
+        // 핵심 컬럼 + 현재 설정의 커스텀필드로 헤더를 다시 만들고, 기존 행을 이름 기준으로 새 컬럼에 맞춰 재배치
+        private void RebuildHeadersFromConfig()
+        {
+            var newHeaders = new List<string>
+            {
+                ResultCsvService.TimeHeader, ResultCsvService.SensorHeader,
+                ResultCsvService.PointHeader, ResultCsvService.ResultHeader, ResultCsvService.ImagePathHeader
+            };
+            foreach (var f in ConfigModel.Instance.CustomFields)
+                if (!string.IsNullOrWhiteSpace(f.Name)) newHeaders.Add(f.Name);
+
+            var nh = newHeaders.ToArray();
+            if (_headers != null && nh.SequenceEqual(_headers)) return; // 바뀐 게 없으면 유지
+
+            var old = _headers;
+            var remapped = _rows.Select(r => RemapRow(r, old, nh)).ToList();
+
+            Headers = nh; // 컬럼 재생성
+            Rows = new ObservableCollection<ResultRow>(remapped);
+        }
+
+        // 기존 행 Values를 새 헤더 순서로 옮김 (이름 매칭, 없으면 빈칸). Sensor/ImagePath/판정은 기존 값 유지
+        private static ResultRow RemapRow(ResultRow row, string[] oldHeaders, string[] newHeaders)
+        {
+            var mapped = new string[newHeaders.Length];
+            for (int i = 0; i < newHeaders.Length; i++)
+            {
+                int src = ResultCsvService.IndexOf(oldHeaders, newHeaders[i]);
+                mapped[i] = (src >= 0 && src < row.Values.Length) ? row.Values[src] : "";
+            }
+            return new ResultRow(mapped, row.Sensor, row.ImagePath, row.IsNg);
         }
 
         #region 바인딩 속성

@@ -849,6 +849,7 @@ namespace Cognex.InSight.Web
         ConnectTimings = string.Join(", ", timings);
 
         _keepAliveTimer.Interval = _keepAliveInterval;
+        _keepAliveTimer.Elapsed -= _keepAliveTimer_Elapsed; // 재연결 시 핸들러 중복 등록 방지
         _keepAliveTimer.Elapsed += _keepAliveTimer_Elapsed;
         _keepAliveTimer.Start();
 
@@ -883,8 +884,13 @@ namespace Cognex.InSight.Web
     {
       try
       {
-        _cogSocket.Dispose();
-        _cogSocket = null;
+        // 사용자 Disconnect()와 동시에 실행될 수 있음 -> 소켓을 한 번만 꺼내서 정리
+        var socket = System.Threading.Interlocked.Exchange(ref _cogSocket, null);
+        if (socket != null)
+        {
+          socket.Closed -= _cogSocket_Closed;
+          socket.Dispose();
+        }
         // Do the other clean up after an unexpected disconnect and raise the StateChanged event
         await Disconnect();
       }
@@ -905,19 +911,20 @@ namespace Cognex.InSight.Web
         _keepAliveTimer.Stop();
       }
 
-      if (_cogSocket != null)
+      // 소켓 Closed 이벤트(센서 쪽 종료)와 경쟁하지 않도록 한 번만 꺼내서 정리
+      var socket = System.Threading.Interlocked.Exchange(ref _cogSocket, null);
+      if (socket != null)
       {
-        _cogSocket.Closed -= _cogSocket_Closed;
+        socket.Closed -= _cogSocket_Closed;
         try
         {
-          await _cogSocket.PostAsync(_sessionIDPath + _disposePath, new object[0]);
+          await socket.PostAsync(_sessionIDPath + _disposePath, new object[0]);
         }
         catch (Exception ex)
         {
           Debug.WriteLine($"Session Dispose Error: {ex.Message}");
         }
-        _cogSocket.Dispose();
-        _cogSocket = null;
+        socket.Dispose();
       }
 
       if (_isConnected)
@@ -961,9 +968,13 @@ namespace Cognex.InSight.Web
     /// </summary>
     public async Task SendReady()
     {
+      // 연결 해제 중(_cogSocket = null)에 디스플레이 결과 처리 등에서 호출될 수 있음 -> 무시
+      var socket = _cogSocket;
+      if (socket == null) return;
+
       _skipKeepAlive = true;
       // Accept the next result
-      await _cogSocket.PostAsync(_sessionIDPath + _readyPath, new object[0]).ConfigureAwait(false);
+      await socket.PostAsync(_sessionIDPath + _readyPath, new object[0]).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1180,25 +1191,194 @@ namespace Cognex.InSight.Web
     /// </remarks>
         public Task LoadImage(string filename)
         {
-            return LoadImage(File.ReadAllBytes(filename));
+            return LoadImage(File.ReadAllBytes(filename), filename);
         }
+
+        // 세션 경로가 404인 장치(Vision Suite 에뮬레이터)는 runtime 경로를 사용 - 한 번 확인되면 기억
+        private bool _loadImageUseRuntimeRoute;
 
         /// <summary>
         /// BMP 데이터를 센서의 현재 이미지로 올려 잡을 다시 실행 (오프라인 재검사용)
         /// async void 였던 것을 Task로 변경 - 실패 시 호출 측에서 예외 처리 가능 (async void는 예외 시 앱 종료)
+        /// 실제 센서: {httpRequestRoot}{session}/loadImage
+        /// Suite 에뮬레이터: {root}runtime/loadImage?contentAt=0&argsJson=["파일명",true] (Suite Playback과 같은 요청)
         /// </summary>
-        public async Task LoadImage(byte[] bmpBytes)
+        public async Task LoadImage(byte[] bmpBytes, string fileName = "image.bmp")
         {
-            string url = RemoteIPAddressUrl + _httpRequestRoot + _sessionIDPath + _loadImagePath;
+            if (!_loadImageUseRuntimeRoute)
+            {
+                string url = RemoteIPAddressUrl + _httpRequestRoot + _sessionIDPath + _loadImagePath;
+                using (HttpResponseMessage msg = await PostBmpAsync(url, bmpBytes))
+                {
+                    if (msg.StatusCode != System.Net.HttpStatusCode.NotFound)
+                    {
+                        msg.EnsureSuccessStatusCode();
+                        return;
+                    }
+                }
+                _loadImageUseRuntimeRoute = true;
+            }
 
+            // Suite 에뮬레이터: HMI 포트가 아닌 runtime HTTP 포트로, 연결 토큰 인증 헤더를 붙여서 전송 (Suite Playback 캡처 기준)
+            // 토큰은 Cognex 자체 라이브러리(ConnectionTokenHelper.GetTokenAsync)로 생성 - 직접 계산은 Cognex 서명키에 묶여 있어 불가(403)
+            string runtimeBase = "http://" + _ipAddress.Split(':')[0] + ":" + GetEmulatorRuntimePort();
+
+            string argsJson = new JArray(fileName ?? "image.bmp", true).ToString(Newtonsoft.Json.Formatting.None);
+            // _rootPath 는 "/cam0/hmi/" 형태 -> runtime 은 카메라 경로("/cam0/") 바로 아래
+            string camSegment = (_rootPath ?? "").Trim('/').Split('/')[0];
+            if (string.IsNullOrEmpty(camSegment) || camSegment == "system") camSegment = "cam0";
+            string runtimeUrl = runtimeBase + "/" + camSegment + "/runtime/" + _loadImagePath
+                + "?contentAt=0&argsJson=" + Uri.EscapeDataString(argsJson);
+
+            // 토큰 생성은 powershell 프로세스를 띄워 느리므로(수백 ms) 에뮬레이터 실행 동안 재사용되는 토큰을 캐시.
+            // 포트/주소가 바뀌면(에뮬레이터 재시작) 캐시 키가 달라져 자동 재생성. 인증 실패(401/403) 시 1회 무효화 후 재시도.
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                string connectionToken = await GetCachedEmulatorTokenAsync(runtimeBase, forceRefresh: attempt > 0);
+                var headers = new Dictionary<string, string>
+                {
+                    { "Cognex-InSight-User", _username ?? "admin" },
+                    { "Cognex-InSight-Connection-Token", connectionToken }
+                };
+                using (HttpResponseMessage msg = await PostBmpAsync(runtimeUrl, bmpBytes, headers))
+                {
+                    if (msg.IsSuccessStatusCode) return;
+
+                    bool authFail = msg.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                                 || msg.StatusCode == System.Net.HttpStatusCode.Forbidden;
+                    if (authFail && attempt == 0) continue; // 캐시 토큰 만료 가능성 -> 재생성 후 1회 재시도
+
+                    string body = "";
+                    try { body = await msg.Content.ReadAsStringAsync(); } catch { }
+                    string tokenPrefix = connectionToken != null && connectionToken.Length > 8 ? connectionToken.Substring(0, 8) : connectionToken;
+                    throw new Exception($"{(int)msg.StatusCode} {msg.StatusCode} | url={runtimeUrl} | token={tokenPrefix}... | body={body}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 에뮬레이터 runtime HTTP 포트 (에뮬레이터가 기록하는 sheetsPortRegistry.json 의 http_priority_1)
+        /// </summary>
+        private static int GetEmulatorRuntimePort()
+        {
+            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cognex", "In-Sight Emulator", "sheetsPortRegistry.json");
+            if (!File.Exists(path)) throw new Exception("404 - 에뮬레이터 포트 정보 없음: " + path);
+
+            JToken port = JObject.Parse(File.ReadAllText(path))["http_priority_1"];
+            if (port == null) throw new Exception("404 - http_priority_1 포트 없음: " + path);
+            return port.Value<int>();
+        }
+
+        // Cognex 의 토큰 파생(GenerateDerivedToken)은 호출 스택의 어셈블리 공개키를 섞음.
+        // VisionCore 프로세스 안에서 호출하면 우리 어셈블리가 섞여 서버가 거부(403)하므로,
+        // 어떤 프로세스에서 호출해도 올바른 값이 나오는 성질을 이용해 별도 powershell 프로세스에서 생성한다.
+        // runtimeBase -> 토큰 캐시 (에뮬레이터 실행 동안 토큰 고정). 매 클릭 powershell 재실행 방지
+        private static readonly Dictionary<string, string> _emulatorTokenCache = new Dictionary<string, string>();
+        private static readonly object _emulatorTokenCacheLock = new object();
+
+        private static async Task<string> GetCachedEmulatorTokenAsync(string runtimeBase, bool forceRefresh)
+        {
+            if (!forceRefresh)
+            {
+                lock (_emulatorTokenCacheLock)
+                {
+                    string cached;
+                    if (_emulatorTokenCache.TryGetValue(runtimeBase, out cached)) return cached;
+                }
+            }
+
+            string token = await Task.Run(() => GetEmulatorConnectionToken(runtimeBase));
+            lock (_emulatorTokenCacheLock) { _emulatorTokenCache[runtimeBase] = token; }
+            return token;
+        }
+
+        private static string GetEmulatorConnectionToken(string runtimeBaseUrl)
+        {
+            string dll = FindCommunicationsDll();
+            if (dll == null) throw new Exception("404 - Cognex.InSight.Communications.dll 없음 (In-Sight 에뮬레이터 미설치). 에뮬레이터 재검사 불가.");
+
+            string script =
+                "$a=[Reflection.Assembly]::LoadFrom('" + dll.Replace("'", "''") + "');" +
+                "$t=$a.GetType('Cognex.InSight.Communications.Http.ConnectionTokenHelper');" +
+                "$m=$t.GetMethod('GetTokenAsync',[Reflection.BindingFlags]'Public,Static');" +
+                "$k=$m.Invoke($null,@([Uri]'" + runtimeBaseUrl.Replace("'", "''") + "'));" +
+                "$null=([Threading.Tasks.Task]$k).Wait(5000);" + // Wait() 반환 True 가 stdout 에 섞이지 않도록
+                "[Console]::Out.Write($k.GetType().GetProperty('Result').GetValue($k))";
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " +
+                            Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(script)),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using (var p = System.Diagnostics.Process.Start(psi))
+            {
+                string outp = p.StandardOutput.ReadToEnd();
+                string err = p.StandardError.ReadToEnd();
+                if (!p.WaitForExit(15000)) { try { p.Kill(); } catch { } throw new Exception("토큰 생성 프로세스 시간 초과"); }
+
+                // 혹시 모를 앞쪽 잡음 제거: 공백 아닌 마지막 줄만 토큰으로 사용
+                string token = "";
+                foreach (var line in (outp ?? "").Split('\n'))
+                {
+                    string ln = line.Trim();
+                    if (ln.Length > 0) token = ln;
+                }
+                if (string.IsNullOrEmpty(token))
+                    throw new Exception("토큰 생성 실패(빈 값). dll=" + dll + " err=" + (err ?? "").Trim());
+                return token;
+            }
+        }
+
+        // 설치된 In-Sight 중 가장 최신 버전의 Communications DLL 경로 (에뮬레이터 폴더 우선)
+        // 앱이 AnyCPU(Prefer32Bit)로 32비트 실행되면 ProgramFiles 가 (x86) 를 가리키므로 64비트 경로(ProgramW6432)도 함께 탐색
+        private static string FindCommunicationsDll()
+        {
+            var pfRoots = new List<string>();
+            foreach (var env in new[] { "ProgramW6432", "ProgramFiles", "ProgramFiles(x86)" })
+            {
+                string pf = Environment.GetEnvironmentVariable(env);
+                if (!string.IsNullOrEmpty(pf) && !pfRoots.Contains(pf)) pfRoots.Add(pf);
+            }
+
+            var subs = new[] { "Emulators", "In-Sight Vision Suite Editors" };
+            foreach (var pf in pfRoots)
+            {
+                foreach (var sub in subs)
+                {
+                    string root = Path.Combine(pf, "Cognex", "In-Sight", sub);
+                    if (!Directory.Exists(root)) continue;
+                    try
+                    {
+                        var files = Directory.GetFiles(root, "Cognex.InSight.Communications.dll", SearchOption.AllDirectories);
+                        if (files.Length == 0) continue;
+                        Array.Sort(files, StringComparer.OrdinalIgnoreCase); // 버전 폴더명 오름차순 -> 마지막이 최신
+                        return files[files.Length - 1];
+                    }
+                    catch { /* 접근 거부 하위 폴더 등은 건너뜀 */ }
+                }
+            }
+            return null;
+        }
+
+        private async Task<HttpResponseMessage> PostBmpAsync(string url, byte[] bmpBytes, Dictionary<string, string> headers = null)
+        {
+            using (var request = new HttpRequestMessage(HttpMethod.Post, url))
             using (var content = new ByteArrayContent(bmpBytes))
             {
                 content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/bmp");
-
-                using (HttpResponseMessage msg = await _httpClient.PostAsync(url, content))
+                request.Content = content;
+                if (headers != null)
                 {
-                    msg.EnsureSuccessStatusCode();
+                    foreach (var h in headers) request.Headers.TryAddWithoutValidation(h.Key, h.Value);
                 }
+                return await _httpClient.SendAsync(request);
             }
         }
 
@@ -1252,9 +1432,11 @@ namespace Cognex.InSight.Web
           return;
         }
 
-        if (_isConnected)
+        // 센서가 끊기면 소켓 스레드에서 _cogSocket = null 이 되므로 로컬로 잡아서 사용
+        var socket = _cogSocket;
+        if (_isConnected && socket != null)
         {
-          await _cogSocket.PostAsync(_sessionIDPath + _keepAlivePath, new object[0]).ConfigureAwait(false);
+          await socket.PostAsync(_sessionIDPath + _keepAlivePath, new object[0]).ConfigureAwait(false);
         }
       }
       catch (Exception ex)
@@ -1530,6 +1712,16 @@ namespace Cognex.InSight.Web
     /// <summary>
     /// Handles the EditorAttachedChanged event from the CogSocket and forwards it.
     /// </summary>
+    /// <summary>
+    /// 센서에 editorAttached 를 다시 물어봄 (편집기 종료 이벤트를 놓쳐 값이 남아 있는 경우 대비)
+    /// </summary>
+    public async Task<bool> RefreshEditorAttachedAsync()
+    {
+      if (_cogSocket == null) return _editorAttached;
+      await RequestEditorAttached();
+      return _editorAttached;
+    }
+
     private async void HandleEditorAttachedChanged(object sender, CogSocketEventArgs args)
     {
       try
